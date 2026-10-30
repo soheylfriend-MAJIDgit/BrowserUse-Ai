@@ -8,13 +8,139 @@ from typing import Any
 
 import httpx
 
+from backend.routeway_llm import (
+    ROUTEWAY_BASE_URL,
+    ChatRouteway,
+    ensure_routeway_free_model_id,
+)
+
+
+ROUTEWAY_CURATED_FREE_PACK: list[dict[str, Any]] = [
+    {
+        "name": "Routeway • Glimmer 30B (رایگان + بینایی)",
+        "model": "muse-glimmer-30b:free",
+        "vision_enabled": True,
+    },
+    {
+        "name": "Routeway • Gemma 4 Chimerax (رایگان + بینایی)",
+        "model": "gemma-4-26b-a4b-it-chimerax:free",
+        "vision_enabled": True,
+    },
+    {
+        "name": "Routeway • Gemma 4 Luminous (رایگان + بینایی)",
+        "model": "gemma-4-26b-a4b-it-luminous:free",
+        "vision_enabled": True,
+    },
+    {
+        "name": "Routeway • DeepSeek V4 Flash (رایگان + متنی سریع)",
+        "model": "deepseek-v4-flash:free",
+        "vision_enabled": False,
+    },
+    {
+        "name": "Routeway • MiniMax M2.7 (رایگان + ایجنت متنی)",
+        "model": "minimax-m2.7:free",
+        "vision_enabled": False,
+    },
+]
+
 
 PROVIDERS: list[dict[str, Any]] = [
+    {
+        "id": "routeway",
+        "name": "Routeway AI (بخش ۱۰۰٪ رایگان • Free Models)",
+        "short_name": "Routeway (رایگان)",
+        "badge": "⭐ کلید شما • ۱۰۰٪ رایگان (:free)",
+        "badge_color": "emerald",
+        "requires_api_key": True,
+        "supports_base_url": True,
+        "default_base_url": ROUTEWAY_BASE_URL,
+        "default_model": "muse-glimmer-30b:free",
+        "vision_recommended": True,
+        "api_key_placeholder": "کلید دریافتی از routeway.ai/dashboard ...",
+        "key_url": "https://routeway.ai/dashboard",
+        "summary_fa": (
+            "تنظیم‌شده اختصاصی برای بخش ۱۰۰٪ رایگان Routeway! تمام مدل‌های زیر هزینه $0.00 دارند (پسوند :free) "
+            "و قفل ایمنی «فقط رایگان» جلوی فراخوانی اشتباهی مدل‌های پولی را می‌گیرد."
+        ),
+        "guide_fa": (
+            "۱. کلید API خود از سایت routeway.ai/dashboard را در کادر کلید وارد کنید.\n"
+            "۲. پیشنهاد ویژه: بعد از وارد کردن کلید، روی دکمه «⚡ ساخت خودکار پک ۵ مدل رایگان Routeway با همین کلید» بزنید تا ۵ مدل برتر رایگان یک‌جا برایتان ساخته شود و از نوار بالا با یک کلیک بینشان سوییچ کنید!\n"
+            "۳. برای کارهایی که دیدن ظاهر صفحه مهم است از مدل‌های دارای Vision (مثل Glimmer 30B یا Gemma 4 26B) و برای کارهای متنی سریع از DeepSeek V4 Flash یا MiniMax M2.7 استفاده کنید.\n"
+            "۴. نکته سهمیه رایگان Routeway: مدل‌های :free محدودیت ۲۰ درخواست در دقیقه و ۲۰۰ درخواست در روز دارند (شارژ مجدد روزانه ساعت ۰۳:۳۰ بامداد به وقت ایران)."
+        ),
+        "models": [
+            {
+                "id": "muse-glimmer-30b:free",
+                "label": "Glimmer 30B — Meta (رایگان $0 • 📸 دارای Vision + ابزار • پیشنهادی اول)",
+                "vision": True,
+            },
+            {
+                "id": "gemma-4-26b-a4b-it-chimerax:free",
+                "label": "Gemma 4 26b Chimerax — Google (رایگان $0 • 📸 دارای Vision + JSON)",
+                "vision": True,
+            },
+            {
+                "id": "gemma-4-26b-a4b-it-luminous:free",
+                "label": "Gemma 4 26b Luminous — Google (رایگان $0 • 📸 دارای Vision + JSON)",
+                "vision": True,
+            },
+            {
+                "id": "gemma-4-26b-a4b-it-moonlight:free",
+                "label": "Gemma 4 26b Moonlight — Google (رایگان $0 • 📸 دارای Vision + JSON)",
+                "vision": True,
+            },
+            {
+                "id": "gemma-4-26b-a4b-it-darksoul:free",
+                "label": "Gemma 4 26b Darksoul — Google (رایگان $0 • 📸 دارای Vision + JSON)",
+                "vision": True,
+            },
+            {
+                "id": "gemma-4-26b-a4b-it-musica:free",
+                "label": "Gemma 4 26b Musica — Google (رایگان $0 • 📸 دارای Vision + JSON)",
+                "vision": True,
+            },
+            {
+                "id": "gemma-4-26b-a4b-it-meromero:free",
+                "label": "Gemma 4 26B MeroMero — Google (رایگان $0 • 📸 دارای Vision + JSON)",
+                "vision": True,
+            },
+            {
+                "id": "deepseek-v4-flash:free",
+                "label": "DeepSeek V4 Flash (رایگان $0 • 📄 متنی بسیار سریع • بدون Vision)",
+                "vision": False,
+            },
+            {
+                "id": "minimax-m2.7:free",
+                "label": "MiniMax M2.7 (رایگان $0 • 📄 ایجنت متنی قوی • بدون Vision)",
+                "vision": False,
+            },
+            {
+                "id": "ling-3.0-flash:free",
+                "label": "Ling 3.0 Flash (رایگان $0 • 📄 حافظه طولانی 260K • بدون Vision)",
+                "vision": False,
+            },
+            {
+                "id": "step-3.5-flash:free",
+                "label": "Step 3.5 Flash (رایگان $0 • 📄 استدلالی 256K • بدون Vision)",
+                "vision": False,
+            },
+            {
+                "id": "llama-3.3-70b-instruct:free",
+                "label": "Llama 3.3 70B Instruct — Meta (رایگان $0 • 📄 متنی • بدون Vision)",
+                "vision": False,
+            },
+            {
+                "id": "deepseek-r1:free",
+                "label": "DeepSeek R1 (رایگان $0 • 📄 استدلالی عمیق • بدون Vision)",
+                "vision": False,
+            },
+        ],
+    },
     {
         "id": "google",
         "name": "Google Gemini (گوگل جمینای)",
         "short_name": "Gemini",
-        "badge": "پیشنهادی • سهمیه رایگان",
+        "badge": "سهمیه رایگان گوگل",
         "badge_color": "emerald",
         "requires_api_key": True,
         "supports_base_url": False,
@@ -23,11 +149,10 @@ PROVIDERS: list[dict[str, Any]] = [
         "vision_recommended": True,
         "api_key_placeholder": "AIzaSy...",
         "key_url": "https://aistudio.google.com/apikey",
-        "summary_fa": "یکی از بهترین و به‌صرفه‌ترین گزینه‌ها برای کار با مرورگر! گوگل کلید رایگان با سهمیه روزانه عالی ارائه می‌دهد و بینایی (دیدن صفحه وب) فوق‌العاده‌ای دارد.",
+        "summary_fa": "سرویس رسمی گوگل با سهمیه رایگان روزانه و بینایی (دیدن صفحه وب) فوق‌العاده.",
         "guide_fa": (
             "۱. وارد سایت aistudio.google.com/apikey شوید و روی دکمه Create API Key کلیک کنید.\n"
             "۲. کلید ساخته‌شده (که با AIza شروع می‌شود) را کپی و در کادر بالا وارد کنید.\n"
-            "۳. مدل gemini-2.5-flash سریع، دقیق و دارای سهمیه رایگان است. برای کارهای فوق‌العاده پیچیده از gemini-2.5-pro استفاده کنید.\n"
             "نکته برای کاربران ایران: سرویس گوگل به آی‌پی ایران حساس است؛ هنگام اجرا تحریم‌شکن یا فیلترشکن روشن باشد."
         ),
         "models": [
@@ -50,11 +175,10 @@ PROVIDERS: list[dict[str, Any]] = [
         "vision_recommended": True,
         "api_key_placeholder": "sk-or-v1-...",
         "key_url": "https://openrouter.ai/keys",
-        "summary_fa": "با یک کلید OpenRouter می‌توانید بین صدها مدل مختلف (Llama 4، DeepSeek، Gemini، GPT، Claude و Qwen — حتی مدل‌های رایگان :free) جابه‌جا شوید.",
+        "summary_fa": "با یک کلید OpenRouter می‌توانید بین صدها مدل مختلف (Llama 4، DeepSeek، Gemini، GPT، Claude و Qwen) جابه‌جا شوید.",
         "guide_fa": (
             "۱. در سایت openrouter.ai ثبت‌نام کرده و از بخش Keys یک کلید جدید (sk-or-v1-...) بسازید.\n"
-            "۲. می‌توانید از لیست مدل‌های پیشنهادی انتخاب کنید یا نام دقیق هر مدلی در OpenRouter را در بخش «نام مدل» تایپ کنید (مثلاً meta-llama/llama-4-maverick یا qwen/qwen2.5-vl-72b-instruct:free).\n"
-            "۳. اگر مدلی که انتخاب کردید قابلیت دیدن عکس ندارد، تیک «بینایی (Vision)» را خاموش کنید."
+            "۲. می‌توانید از لیست مدل‌های پیشنهادی انتخاب کنید یا نام دقیق هر مدلی در OpenRouter را تایپ کنید."
         ),
         "models": [
             {"id": "google/gemini-2.5-flash", "label": "Google: Gemini 2.5 Flash (بینایی عالی + ارزان)", "vision": True},
@@ -63,7 +187,6 @@ PROVIDERS: list[dict[str, Any]] = [
             {"id": "openai/gpt-4.1-mini", "label": "OpenAI: GPT-4.1 Mini (دقیق و سریع)", "vision": True},
             {"id": "anthropic/claude-sonnet-4", "label": "Anthropic: Claude Sonnet 4 (قدرتمندترین در وب)", "vision": True},
             {"id": "deepseek/deepseek-chat", "label": "DeepSeek V3 Chat (متنی و بسیار ارزان - بدون Vision)", "vision": False},
-            {"id": "qwen/qwen-2.5-vl-72b-instruct", "label": "Qwen 2.5 VL 72B (بینایی متن‌باز قوی)", "vision": True},
         ],
     },
     {
@@ -79,11 +202,10 @@ PROVIDERS: list[dict[str, Any]] = [
         "vision_recommended": True,
         "api_key_placeholder": "gsk_...",
         "key_url": "https://console.groq.com/keys",
-        "summary_fa": "اگر به مدل‌های Llama علاقه دارید، Groq سریع‌ترین سرویس دنیا برای اجرای Llama 4 (همراه با بینایی تصویر) است و پلن رایگان روزانه هم دارد!",
+        "summary_fa": "سریع‌ترین سرویس دنیا برای اجرای Llama 4 (همراه با بینایی تصویر) با پلن رایگان روزانه!",
         "guide_fa": (
             "۱. وارد console.groq.com/keys شوید و یک کلید (که با gsk_ شروع می‌شود) بسازید.\n"
-            "۲. مدل‌های Llama 4 Maverick و Llama 4 Scout در Groq هم فوق‌العاده سریع هستند و هم تصویر صفحه وب را می‌بینند!\n"
-            "۳. اگر از مدل‌های صرفاً متنی مثل qwen/qwen3-32b استفاده می‌کنید، گزینه Vision به صورت خودکار یا دستی بهتر است غیرفعال شود."
+            "۲. مدل‌های Llama 4 Maverick و Llama 4 Scout در Groq هم فوق‌العاده سریع هستند و هم تصویر صفحه وب را می‌بینند!"
         ),
         "models": [
             {"id": "meta-llama/llama-4-maverick-17b-128e-instruct", "label": "Llama 4 Maverick 17B (پیشنهادی - دارای بینایی)", "vision": True},
@@ -106,11 +228,10 @@ PROVIDERS: list[dict[str, Any]] = [
         "vision_recommended": False,
         "api_key_placeholder": "نیازی به کلید ندارد (خالی بگذارید)",
         "key_url": "https://ollama.com/download",
-        "summary_fa": "اگر مدل‌های Llama، Qwen یا Gemma را با برنامه Ollama روی کامپیوتر خودتان نصب کرده‌اید، بدون هیچ هزینه و بدون نیاز به API Key از آن‌ها استفاده کنید!",
+        "summary_fa": "اجرای مدل‌های نصب‌شده روی کامپیوتر خودتان بدون هزینه و بدون نیاز به API Key.",
         "guide_fa": (
             "۱. برنامه Ollama را از ollama.com نصب و اجرا کنید.\n"
-            "۲. روی دکمه «شناسایی خودکار مدل‌های نصب‌شده در Ollama» کلیک کنید تا لیست مدل‌های روی کامپیوترتان ظاهر شود.\n"
-            "۳. برای وب‌گردی لوکال، مدل‌های حداقل 7B یا 14B (مثل qwen2.5:14b، llama3.1:8b یا qwen2.5vl:7b) نتیجه بهتری می‌دهند."
+            "۲. روی دکمه «اسکن Ollama» کلیک کنید تا لیست مدل‌های روی کامپیوترتان ظاهر شود."
         ),
         "models": [
             {"id": "qwen2.5:14b", "label": "Qwen 2.5 14B (دقت بالا در خروجی ساختاری)", "vision": False},
@@ -133,18 +254,17 @@ PROVIDERS: list[dict[str, Any]] = [
         "vision_recommended": True,
         "api_key_placeholder": "aa-... یا sk-...",
         "key_url": "",
-        "summary_fa": "مخصوص اتصال به سرویس‌های واسط ایرانی (مثل AvalAI، GapGPT، MetisAI) یا برنامه‌های لوکال مثل LM Studio و هر سرویسی که استاندارد OpenAI دارد.",
+        "summary_fa": "مخصوص اتصال به سرویس‌های واسط ایرانی (مثل AvalAI، GapGPT) یا برنامه‌های لوکال مثل LM Studio و هر سرور استاندارد OpenAI.",
         "guide_fa": (
-            "۱. آدرس Base URL سرویس مورد نظر خود را وارد کنید (یا از دکمه‌های آماده زیر کادر آدرس مثل AvalAI، GapGPT یا LM Studio بزنید).\n"
-            "۲. کلید API دریافتی از آن سایت و نام دقیق مدل (مثلاً gpt-4o-mini یا gemini-2.5-flash) را وارد کنید.\n"
-            "۳. اگر از LM Studio روی سیستم خودتان استفاده می‌کنید، آدرس http://localhost:1234/v1 را انتخاب کنید و کلید را خالی بگذارید."
+            "۱. آدرس Base URL سرویس مورد نظر خود را وارد کنید (یا از دکمه‌های آماده زیر کادر آدرس بزنید).\n"
+            "۲. کلید API و نام دقیق مدل را وارد کنید."
         ),
         "presets": [
+            {"label": "Routeway AI", "base_url": "https://api.routeway.ai/v1", "sample_model": "muse-glimmer-30b:free"},
             {"label": "AvalAI (آوال‌آی)", "base_url": "https://api.avalai.ir/v1", "sample_model": "gpt-4o-mini"},
             {"label": "GapGPT (گپ‌جی‌پی‌تی)", "base_url": "https://api.gapgpt.app/v1", "sample_model": "gpt-4o-mini"},
             {"label": "LM Studio (لوکال)", "base_url": "http://localhost:1234/v1", "sample_model": "local-model"},
             {"label": "Together AI", "base_url": "https://api.together.xyz/v1", "sample_model": "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"},
-            {"label": "Fireworks AI", "base_url": "https://api.fireworks.ai/inference/v1", "sample_model": "accounts/fireworks/models/llama4-maverick-instruct-basic"},
         ],
         "models": [
             {"id": "gpt-4o-mini", "label": "gpt-4o-mini (اقتصادی و سریع)", "vision": True},
@@ -166,19 +286,14 @@ PROVIDERS: list[dict[str, Any]] = [
         "vision_recommended": True,
         "api_key_placeholder": "sk-proj-...",
         "key_url": "https://platform.openai.com/api-keys",
-        "summary_fa": "سرویس رسمی شرکت OpenAI با بالاترین سازگاری و دقت در کلیک، پر کردن فرم و خواندن صفحات پیچیده وب.",
-        "guide_fa": (
-            "۱. کلید خود را از platform.openai.com/api-keys دریافت کنید (نیاز به شارژ دلاری دارد).\n"
-            "۲. مدل gpt-4.1-mini بهترین تعادل قیمت، سرعت و هوش را برای Browser Use دارد.\n"
-            "۳. برای تسک‌های بسیار حساس و چندمرحله‌ای می‌توانید از gpt-4.1 یا gpt-5-mini استفاده کنید."
-        ),
+        "summary_fa": "سرویس رسمی شرکت OpenAI با بالاترین سازگاری در کلیک و خواندن صفحات وب.",
+        "guide_fa": "کلید خود را از platform.openai.com/api-keys دریافت کرده و مدل gpt-4.1-mini یا gpt-4o را انتخاب کنید.",
         "models": [
             {"id": "gpt-4.1-mini", "label": "GPT-4.1 Mini (بهترین تعادل قیمت و دقت)", "vision": True},
             {"id": "gpt-4.1", "label": "GPT-4.1 (فوق‌العاده دقیق)", "vision": True},
             {"id": "gpt-4o-mini", "label": "GPT-4o Mini (ارزان و سریع)", "vision": True},
             {"id": "gpt-4o", "label": "GPT-4o (کلاسیک و قدرتمند)", "vision": True},
             {"id": "gpt-5-mini", "label": "GPT-5 Mini (نسل جدید استدلالی)", "vision": True},
-            {"id": "o4-mini", "label": "o4-mini (مدل متفکر برای مسائل سخت)", "vision": True},
         ],
     },
     {
@@ -194,12 +309,8 @@ PROVIDERS: list[dict[str, Any]] = [
         "vision_recommended": False,
         "api_key_placeholder": "sk-...",
         "key_url": "https://platform.deepseek.com/api_keys",
-        "summary_fa": "مدل بسیار محبوب و ارزان دیپ‌سیک. توجه: مدل deepseek-chat ساختار متنی صفحه (DOM) را تحلیل می‌کند، بنابراین گزینه Vision برای آن به صورت خودکار خاموش می‌شود.",
-        "guide_fa": (
-            "۱. کلید API را از platform.deepseek.com دریافت کنید.\n"
-            "۲. مدل deepseek-chat برای استخراج متن، جستجو و کار با فرم‌ها بسیار اقتصادی است.\n"
-            "۳. از آنجا که deepseek-chat ورودی عکس نمی‌گیرد، برنامه به طور هوشمند ساختار کدهای صفحه وب را به آن می‌دهد."
-        ),
+        "summary_fa": "سرویس رسمی دیپ‌سیک (تحلیل متنی ساختار صفحه بدون Vision).",
+        "guide_fa": "کلید API را از platform.deepseek.com دریافت کنید.",
         "models": [
             {"id": "deepseek-chat", "label": "DeepSeek Chat V3 (پیشنهادی - بدون Vision)", "vision": False},
             {"id": "deepseek-v4-flash", "label": "DeepSeek V4 Flash (سریع)", "vision": False},
@@ -219,11 +330,8 @@ PROVIDERS: list[dict[str, Any]] = [
         "vision_recommended": True,
         "api_key_placeholder": "sk-ant-...",
         "key_url": "https://console.anthropic.com/settings/keys",
-        "summary_fa": "مدل‌های Claude Sonnet و Haiku جزو دقیق‌ترین مدل‌های جهان در تشخیص دکمه‌ها و کار با صفحات شلوغ اینترنتی هستند.",
-        "guide_fa": (
-            "۱. کلید خود را از console.anthropic.com دریافت کنید.\n"
-            "۲. مدل claude-haiku-4-5 سریع‌تر و ارزان‌تر است و claude-sonnet-4-5 دقت فوق‌العاده‌ای در کارهای طولانی دارد."
-        ),
+        "summary_fa": "مدل‌های Claude Sonnet و Haiku جزو دقیق‌ترین مدل‌های جهان در تشخیص دکمه‌های صفحات شلوغ هستند.",
+        "guide_fa": "کلید خود را از console.anthropic.com دریافت کنید.",
         "models": [
             {"id": "claude-sonnet-4-5", "label": "Claude Sonnet 4.5 (فوق‌العاده هوشمند)", "vision": True},
             {"id": "claude-haiku-4-5", "label": "Claude Haiku 4.5 (سریع و مقرون‌به‌صرفه)", "vision": True},
@@ -243,34 +351,11 @@ PROVIDERS: list[dict[str, Any]] = [
         "vision_recommended": True,
         "api_key_placeholder": "bu_...",
         "key_url": "https://cloud.browser-use.com",
-        "summary_fa": "مدل اختصاصی خود تیم سازنده Browser Use (شامل مدل سریع و بهینه‌شده برای وب‌گردی که در سایت رسمی معرفی شده است).",
-        "guide_fa": (
-            "۱. در cloud.browser-use.com ثبت‌نام کنید (برای حساب‌های واجد شرایط ۱ دلار اعتبار رایگان بدون کارت بانکی می‌دهد).\n"
-            "۲. کلید API دریافتی را اینجا وارد کنید تا مستقیم به مدل بهینه‌شده خود Browser Use متصل شوید."
-        ),
+        "summary_fa": "مدل اختصاصی خود تیم سازنده Browser Use.",
+        "guide_fa": "در cloud.browser-use.com ثبت‌نام کرده و کلید دریافتی را وارد نمایید.",
         "models": [
             {"id": "bu-2-0", "label": "bu-2-0 (مدل اختصاصی پیش‌فرض Browser Use)", "vision": True},
             {"id": "bu-latest", "label": "bu-latest (آخرین نسخه اختصاصی)", "vision": True},
-        ],
-    },
-    {
-        "id": "xai",
-        "name": "xAI Grok (گروک)",
-        "short_name": "xAI Grok",
-        "badge": "مدل‌های Grok",
-        "badge_color": "slate",
-        "requires_api_key": True,
-        "supports_base_url": True,
-        "default_base_url": "https://api.x.ai/v1",
-        "default_model": "grok-2-vision-1212",
-        "vision_recommended": True,
-        "api_key_placeholder": "xai-...",
-        "key_url": "https://console.x.ai/",
-        "summary_fa": "اتصال مستقیم به مدل‌های Grok ساخت شرکت xAI با پشتیبانی از بینایی و تحلیل صفحات وب.",
-        "guide_fa": "کلید خود را از console.x.ai دریافت کرده و مدل مورد نظر (مانند grok-2-vision-1212 یا grok-3-mini) را انتخاب نمایید.",
-        "models": [
-            {"id": "grok-2-vision-1212", "label": "Grok 2 Vision (دارای بینایی تصویر)", "vision": True},
-            {"id": "grok-3-mini", "label": "Grok 3 Mini (سریع و استدلالی)", "vision": False},
         ],
     },
     {
@@ -286,8 +371,8 @@ PROVIDERS: list[dict[str, Any]] = [
         "vision_recommended": True,
         "api_key_placeholder": "...",
         "key_url": "https://console.mistral.ai/api-keys/",
-        "summary_fa": "سرویس اروپایی Mistral که در کنسول La Plateforme کلید آزمایشی رایگان ارائه می‌دهد و مدل Pixtral آن قابلیت دیدن صفحات وب را دارد.",
-        "guide_fa": "از console.mistral.ai کلید بگیرید. برای داشتن قابلیت دیدن تصویر صفحه وب از مدل pixtral-large-latest یا pixtral-12b-2409 استفاده کنید.",
+        "summary_fa": "سرویس اروپایی Mistral با مدل بینایی Pixtral.",
+        "guide_fa": "از console.mistral.ai کلید بگیرید.",
         "models": [
             {"id": "pixtral-large-latest", "label": "Pixtral Large (بینایی قوی)", "vision": True},
             {"id": "mistral-medium-latest", "label": "Mistral Medium (متعادل)", "vision": True},
@@ -307,8 +392,8 @@ PROVIDERS: list[dict[str, Any]] = [
         "vision_recommended": False,
         "api_key_placeholder": "csk-...",
         "key_url": "https://cloud.cerebras.ai/",
-        "summary_fa": "اجرای مدل‌های Llama و GPT-OSS با سرعت بیش از ۲۰۰۰ توکن بر ثانیه! مناسب کارهای متنی سریع (بدون Vision).",
-        "guide_fa": "کلید را از cloud.cerebras.ai بگیرید. چون مدل‌های Cerebras متنی هستند، گزینه Vision بهتر است خاموش باشد.",
+        "summary_fa": "اجرای مدل‌های Llama با سرعت بیش از ۲۰۰۰ توکن بر ثانیه (متنی بدون Vision).",
+        "guide_fa": "کلید را از cloud.cerebras.ai بگیرید.",
         "models": [
             {"id": "llama-3.3-70b", "label": "Llama 3.3 70B (متنی بسیار قوی)", "vision": False},
             {"id": "gpt-oss-120b", "label": "GPT-OSS 120B (بزرگ و سریع)", "vision": False},
@@ -325,10 +410,10 @@ def get_provider_info(provider_id: str) -> dict[str, Any] | None:
 
 
 def build_llm_from_profile(profile: dict[str, Any]):
-    """Instantiate the native browser_use Chat* model from a saved user profile."""
+    """Instantiate the native browser_use Chat* model (or ChatRouteway) from a saved user profile."""
     import browser_use as bu
 
-    provider = profile.get("provider", "google")
+    provider = profile.get("provider", "routeway")
     model = (profile.get("model") or "").strip()
     api_key = (profile.get("api_key") or "").strip() or None
     base_url = (profile.get("base_url") or "").strip() or None
@@ -341,7 +426,18 @@ def build_llm_from_profile(profile: dict[str, Any]):
 
     p_info = PROVIDER_MAP.get(provider, {})
     if not model:
-        model = p_info.get("default_model", "gpt-4o-mini")
+        model = p_info.get("default_model", "muse-glimmer-30b:free")
+
+    if provider == "routeway":
+        free_only = bool(profile.get("free_only", True))
+        checked_model = ensure_routeway_free_model_id(model, free_only=free_only)
+        return ChatRouteway(
+            model=checked_model,
+            api_key=api_key,
+            base_url=base_url or ROUTEWAY_BASE_URL,
+            temperature=temperature if temperature is not None else 0.2,
+            free_only=free_only,
+        )
 
     if provider == "google":
         kwargs: dict[str, Any] = {"model": model, "api_key": api_key}
@@ -438,7 +534,6 @@ def build_llm_from_profile(profile: dict[str, Any]):
             kwargs["temperature"] = temperature
         return bu.ChatCerebras(**kwargs)
 
-    # Fallback to OpenAI-compatible
     return bu.ChatOpenAI(
         model=model,
         api_key=api_key or "not-needed",
@@ -451,30 +546,42 @@ def translate_llm_error_fa(err: Exception | str) -> str:
     msg = str(err)
     lower = msg.lower()
 
+    if "قفل «فقط مدل‌های رایگان" in msg:
+        return f"🔒 {msg}"
     if "401" in lower or "invalid_api_key" in lower or "api key not valid" in lower or "unauthorized" in lower or "authentication" in lower:
         return (
             "❌ کلید API واردشده معتبر نیست (خطای ۴۰۱).\n"
-            "لطفاً بررسی کنید که کلید را کامل و بدون فاصله اضافه در ابتدا یا انتها کپی کرده باشید و سرویس انتخابی با نوع کلید یکی باشد."
+            "لطفاً بررسی کنید که کلید را کامل و بدون فاصله اضافه کپی کرده باشید."
         )
-    if "429" in lower or "quota" in lower or "rate limit" in lower or "insufficient_quota" in lower or "balance" in lower:
+    if "402" in lower or "insufficient" in lower or "credits" in lower or "payment" in lower:
         return (
-            "⚠️ سهمیه یا شارژ این کلید تمام شده یا به محدودیت تعداد درخواست در دقیقه برخورد کرده است (خطای ۴۲۹).\n"
-            "می‌توانید چند لحظه صبر کنید یا از بالای برنامه، کلید/مدل دیگری را انتخاب نمایید."
+            "💳 این مدل پولی است و حساب شما اعتبار پولی ندارد (خطای ۴۰۲).\n"
+            "حتماً مدلی را انتخاب کنید که در انتهای نامش عبارت :free وجود داشته باشد (مثل muse-glimmer-30b:free یا deepseek-v4-flash:free)."
+        )
+    if "429" in lower or "quota" in lower or "rate limit" in lower or "balance" in lower:
+        return (
+            "⚠️ به سقف درخواست بخش رایگان برخورد کردید (خطای ۴۲۹ — در Routeway سقف رایگان ۲۰ درخواست در دقیقه و ۲۰۰ درخواست در روز است).\n"
+            "راه‌حل سریع: ۳۰ ثانیه صبر کنید یا از منوی بالای صفحه روی یکی دیگر از مدل‌های رایگان خود سوییچ کنید!"
+        )
+    if "502" in lower or "503" in lower or "504" in lower or "upstream" in lower or "bad gateway" in lower:
+        return (
+            "⏳ سرور مدل رایگان فعلی موقتاً شلوغ است (خطای ۵۰۲/۵۰۳).\n"
+            "در مدل‌های رایگان گاهی ترافیک بالا می‌رود؛ کافیست از منوی بالای برنامه به یکی دیگر از مدل‌های رایگان (مثلاً Gemma 4 یا Glimmer یا DeepSeek V4 Flash) سوییچ کنید!"
         )
     if "403" in lower or "user location is not supported" in lower or "permission_denied" in lower or "forbidden" in lower:
         return (
-            "🚫 دسترسی از موقعیت جغرافیایی فعلی مسدود است (خطای ۴۰۳).\n"
-            "این سرویس (مثلاً گوگل جمینای یا OpenAI) به آی‌پی ایران حساس است. لطفاً تحریم‌شکن یا فیلترشکن خود را روشن کرده و دوباره تست کنید."
+            "🚫 دسترسی از آی‌پی فعلی مسدود است (خطای ۴۰۳).\n"
+            "لطفاً فیلترشکن یا تحریم‌شکن خود را بررسی کرده و دوباره تست کنید."
         )
     if "404" in lower or "model_not_found" in lower or "not found" in lower or "does not exist" in lower:
         return (
-            "🔍 نام مدل یا آدرس Base URL پیدا نشد (خطای ۴۰۴).\n"
-            "لطفاً مطمئن شوید نام مدل را دقیق وارد کرده‌اید (یا یکی از مدل‌های پیشنهادی لیست را انتخاب کنید)."
+            "🔍 نام مدل پیدا نشد (خطای ۴۰۴).\n"
+            "در سرویس‌های رایگان گاهی نام مدل‌ها بروزرسانی می‌شود؛ روی دکمه «🔄 بروزرسانی زنده لیست مدل‌های رایگان» بزنید تا لیست جدیدترین مدل‌های فعال امروز دریافت شود."
         )
     if "connection" in lower or "connecterror" in lower or "timed out" in lower or "timeout" in lower or "11434" in lower:
         return (
             "🌐 ارتباط با سرور برقرار نشد (خطای شبکه یا تایم‌اوت).\n"
-            "اگر از مدل اینترنتی استفاده می‌کنید اتصال اینترنت/فیلترشکن را بررسی کنید، و اگر از Ollama یا LM Studio لوکال استفاده می‌کنید مطمئن شوید برنامه آن روی ویندوز باز و در حال اجراست."
+            "اتصال اینترنت (و در صورت نیاز فیلترشکن) را بررسی نمایید."
         )
     return f"❌ خطا در ارتباط با مدل: {msg}"
 
@@ -534,14 +641,14 @@ async def fetch_ollama_models(host: str = "http://localhost:11434") -> dict[str,
                 "message_fa": (
                     f"✅ برنامه Ollama فعال است و {len(models)} مدل لوکال پیدا شد."
                     if models
-                    else "⚠️ برنامه Ollama روشن است اما هنوز مدلی داخل آن دانلود نشده است (مثلاً دستور ollama pull qwen2.5:7b)."
+                    else "⚠️ برنامه Ollama روشن است اما هنوز مدلی داخل آن دانلود نشده است."
                 ),
             }
     except Exception as exc:
         return {
             "ok": False,
             "models": [],
-            "message_fa": "برنامه Ollama روی این آدرس در حال اجرا نیست. اگر می‌خواهید از مدل لوکال استفاده کنید، ابتدا برنامه Ollama را باز کنید.",
+            "message_fa": "برنامه Ollama روی این آدرس در حال اجرا نیست.",
             "raw_error": str(exc),
         }
 
@@ -565,7 +672,11 @@ def get_env_vars_for_profile(profile: dict[str, Any] | None) -> dict[str, str]:
         env["BROWSER_USE_ACTIVE_PROVIDER"] = provider
 
     if key:
-        if provider == "google":
+        if provider == "routeway":
+            env["ROUTEWAY_API_KEY"] = key
+            env["OPENAI_API_KEY"] = key
+            env["OPENAI_BASE_URL"] = base_url or ROUTEWAY_BASE_URL
+        elif provider == "google":
             env["GOOGLE_API_KEY"] = key
             env["GEMINI_API_KEY"] = key
         elif provider == "openrouter":
@@ -602,16 +713,19 @@ def generate_python_code(
 ) -> str:
     """Generate clean, beginner-commented browser-use Python script for the selected task & LLM profile."""
     safe_task = (task or "به سایت news.ycombinator.com برو و ۵ خبر اول را به فارسی خلاصه کن.").replace('"""', "'''")
-    provider = (profile or {}).get("provider", "google")
-    model = (profile or {}).get("model") or PROVIDER_MAP.get(provider, {}).get("default_model", "gemini-2.5-flash")
+    provider = (profile or {}).get("provider", "routeway")
+    model = (profile or {}).get("model") or PROVIDER_MAP.get(provider, {}).get("default_model", "muse-glimmer-30b:free")
     base_url = (profile or {}).get("base_url") or ""
     headless = bool(settings.get("headless", False))
-    use_vision = bool(settings.get("use_vision", True))
-    max_steps = int(settings.get("max_steps", 40))
+    use_vision = bool(settings.get("use_vision", True)) and bool((profile or {}).get("vision_enabled", True))
+    max_steps = int(settings.get("max_steps", 25))
 
-    if provider == "google":
+    if provider == "routeway":
+        import_line = "from browser_use import Agent, Browser\nfrom backend.routeway_llm import ChatRouteway"
+        llm_init = f'llm = ChatRouteway(model="{model}", free_only=True)  # کلید Routeway از پروفایل فعال تزریق می‌شود'
+    elif provider == "google":
         import_line = "from browser_use import Agent, Browser, ChatGoogle"
-        llm_init = f'llm = ChatGoogle(model="{model}")  # کلید از پروفایل فعال شما به صورت خودکار تزریق می‌شود'
+        llm_init = f'llm = ChatGoogle(model="{model}")'
     elif provider == "openrouter":
         import_line = "from browser_use import Agent, Browser, ChatOpenRouter"
         llm_init = f'llm = ChatOpenRouter(model="{model}")'

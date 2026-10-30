@@ -179,11 +179,16 @@ class AgentRunnerManager:
                     fallback_llm = None
 
             # Determine vision support cleanly
-            want_vision = bool(settings.get("use_vision", True)) and bool(profile.get("vision_enabled", True))
-            if profile.get("provider") in ("deepseek", "cerebras"):
-                if want_vision:
-                    self._log("نکته: این سرویس متنی است؛ حالت تحلیل ساختار صفحه (بدون عکس) به صورت خودکار انتخاب شد.")
-                want_vision = False
+            from backend.routeway_llm import KNOWN_TEXT_ONLY_ROUTEWAY_MODELS
+
+            model_lower = (profile.get("model") or "").strip().lower()
+            profile_vision = bool(profile.get("vision_enabled", True))
+            if model_lower in KNOWN_TEXT_ONLY_ROUTEWAY_MODELS or profile.get("provider") in ("deepseek", "cerebras"):
+                profile_vision = False
+
+            want_vision = bool(settings.get("use_vision", True)) and profile_vision
+            if settings.get("use_vision", True) and not profile_vision:
+                self._log("ℹ️ نکته هوشمند: مدل فعلی متنی است (بدون عکس)؛ تحلیل ساختار صفحه (DOM) خودکار جایگزین شد.")
 
             # Browser setup
             headless = bool(settings.get("headless", False))
@@ -210,6 +215,8 @@ class AgentRunnerManager:
                     "height": int(settings.get("window_height", 860)),
                 },
             }
+            if model_lower.endswith(":free") or profile.get("provider") == "routeway":
+                b_kwargs["wait_between_actions"] = 1.4
             if sys.platform.startswith("linux"):
                 b_kwargs["chromium_sandbox"] = False
             if resolved_exe:

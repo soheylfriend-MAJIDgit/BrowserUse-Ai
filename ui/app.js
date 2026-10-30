@@ -5,7 +5,7 @@ const state = {
   profiles: [],
   activeProfileId: null,
   fallbackProfileId: null,
-  selectedProviderId: 'google',
+  selectedProviderId: 'routeway',
   editingProfileId: null,
   settings: {},
   templates: [],
@@ -237,6 +237,8 @@ function renderSavedProfilesList() {
                 <span>${escapeHtml(p.name)}</span>
                 ${isActive ? '<span class="badge badge-amber">⭐ مدل فعال فعلی</span>' : ''}
                 ${isFallback ? '<span class="badge badge-cyan">🛡️ پشتیبان</span>' : ''}
+                ${p.free_only ? '<span class="badge badge-emerald">🔒 فقط رایگان (:free)</span>' : ''}
+                ${p.vision_enabled ? '<span class="badge badge-violet">📸 Vision</span>' : '<span class="badge" style="background:var(--bg-surface-3); color:var(--text-secondary);">📄 متنی</span>'}
               </div>
               <div style="font-size:12.5px; color:var(--text-secondary); margin-top:4px;">
                 سرویس: <strong>${escapeHtml(provLabel)}</strong> • مدل: <code class="ltr">${escapeHtml(p.model)}</code> • کلید: <code class="ltr">${escapeHtml(p.masked_key)}</code>
@@ -317,6 +319,7 @@ function updateProviderFormDetails(preserveValues = false) {
     $('profModelInput').value = prov.default_model || '';
     $('profBaseUrlInput').value = prov.default_base_url || '';
     $('profVisionChk').checked = Boolean(prov.vision_recommended);
+    $('profFreeOnlyChk').checked = prov.id === 'routeway';
     $('profCompatChk').checked = false;
   }
 
@@ -343,6 +346,9 @@ function updateProviderFormDetails(preserveValues = false) {
     presetsRow.style.display = 'none';
   }
 
+  $('btnScanRouteway').style.display = prov.id === 'routeway' ? 'inline-flex' : 'none';
+  $('freeOnlyWrap').style.display = prov.id === 'routeway' ? 'inline-flex' : 'none';
+  $('routewayBulkBox').style.display = prov.id === 'routeway' && !state.editingProfileId ? 'block' : 'none';
   $('btnScanOllama').style.display = prov.id === 'ollama' ? 'inline-flex' : 'none';
   $('compatModeWrap').style.display = prov.id === 'custom_openai' ? 'inline-flex' : 'none';
   $('testResultInline').style.display = 'none';
@@ -411,7 +417,9 @@ window.editProfile = function (profileId) {
   $('profTempInput').value = p.temperature ?? 0.2;
   $('tempValLabel').textContent = String(p.temperature ?? 0.2);
   $('profVisionChk').checked = Boolean(p.vision_enabled);
+  $('profFreeOnlyChk').checked = p.provider === 'routeway' ? Boolean(p.free_only ?? true) : false;
   $('profCompatChk').checked = Boolean(p.compat_schema_mode);
+  $('routewayBulkBox').style.display = 'none';
   $('btnSaveProfile').textContent = '💾 ذخیره تغییرات پروفایل';
   showToast(`در حال ویرایش «${p.name}»`);
 };
@@ -425,7 +433,7 @@ function resetProfileForm() {
   $('profTempInput').value = 0.2;
   $('tempValLabel').textContent = '0.2';
   $('btnSaveProfile').textContent = '💾 ذخیره و فعال‌سازی این پروفایل';
-  selectProvider(state.selectedProviderId || 'google', false);
+  selectProvider(state.selectedProviderId || 'routeway', false);
 }
 
 window.removeProfile = async function (profileId) {
@@ -768,6 +776,63 @@ async function initApp() {
 
   $('btnResetProfileForm').addEventListener('click', resetProfileForm);
 
+  // Scan live Routeway Free models
+  $('btnScanRouteway').addEventListener('click', async () => {
+    const key = $('profApiKeyInput').value.trim();
+    const baseUrl = $('profBaseUrlInput').value.trim() || 'https://api.routeway.ai/v1';
+    const btn = $('btnScanRouteway');
+    btn.disabled = true;
+    btn.textContent = '⏳ در حال دریافت...';
+    try {
+      const qs = `api_key=${encodeURIComponent(key)}&base_url=${encodeURIComponent(baseUrl)}`;
+      const res = await apiFetch(`/api/routeway/models?${qs}`);
+      showToast(res.message_fa, 5000);
+      if (res.ok && res.models && res.models.length > 0) {
+        const prov = state.providers.find((x) => x.id === 'routeway');
+        if (prov) prov.models = res.models;
+        const sel = $('profSuggestedModelSelect');
+        sel.innerHTML = res.models
+          .map((m) => `<option value="${escapeHtml(m.id)}" data-vision="${m.vision}">${escapeHtml(m.label)}</option>`)
+          .join('');
+        $('profModelInput').value = res.models[0].id;
+        $('profVisionChk').checked = Boolean(res.models[0].vision);
+      }
+    } catch (err) {
+      showToast(`خطا: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔄 بروزرسانی لیست رایگان';
+    }
+  });
+
+  // 1-click Bulk Setup for top 5 Routeway Free models
+  $('btnCreateRoutewayPack').addEventListener('click', async () => {
+    const apiKey = $('profApiKeyInput').value.trim();
+    const baseUrl = $('profBaseUrlInput').value.trim() || 'https://api.routeway.ai/v1';
+    const btn = $('btnCreateRoutewayPack');
+    btn.disabled = true;
+    btn.textContent = '⏳ در حال ساخت ۵ پروفایل رایگان...';
+    try {
+      const res = await apiFetch('/api/routeway/bulk-pack', {
+        method: 'POST',
+        body: JSON.stringify({ api_key: apiKey, base_url: baseUrl }),
+      });
+      if (!res.ok) {
+        showToast(`⚠️ ${res.error || 'خطا'}`);
+        $('profApiKeyInput').focus();
+        return;
+      }
+      updateProfilesState(res.profiles_state);
+      resetProfileForm();
+      showToast(res.message_fa, 6000);
+    } catch (err) {
+      showToast(`خطا: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚡ ساخت خودکار پک ۵ مدل رایگان Routeway با همین کلید';
+    }
+  });
+
   // Scan local Ollama models
   $('btnScanOllama').addEventListener('click', async () => {
     const host = $('profBaseUrlInput').value.trim() || 'http://localhost:11434';
@@ -809,6 +874,7 @@ async function initApp() {
           api_key: $('profApiKeyInput').value.trim() || null,
           base_url: $('profBaseUrlInput').value.trim(),
           temperature: parseFloat($('profTempInput').value || '0.2'),
+          free_only: state.selectedProviderId === 'routeway' ? $('profFreeOnlyChk').checked : false,
           compat_schema_mode: $('profCompatChk').checked,
         }),
       });
@@ -838,6 +904,7 @@ async function initApp() {
       base_url: $('profBaseUrlInput').value.trim(),
       temperature: parseFloat($('profTempInput').value || '0.2'),
       vision_enabled: $('profVisionChk').checked,
+      free_only: state.selectedProviderId === 'routeway' ? $('profFreeOnlyChk').checked : false,
       compat_schema_mode: $('profCompatChk').checked,
       set_active: true,
     };

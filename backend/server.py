@@ -18,10 +18,12 @@ from backend.providers import (
     generate_python_code,
     test_profile_connection,
 )
+from backend.routeway_llm import fetch_routeway_free_models
 from backend.runner import agent_runner, browser_installer, script_runner
 from backend.storage import (
     OUTPUTS_DIR,
     TASK_TEMPLATES,
+    bulk_create_routeway_free_pack,
     clear_history,
     delete_profile,
     ensure_dirs,
@@ -60,13 +62,14 @@ app.add_middleware(
 class ProfilePayload(BaseModel):
     id: str | None = None
     name: str = ""
-    provider: str = "google"
+    provider: str = "routeway"
     model: str = ""
     api_key: str | None = None
     keep_existing_key: bool = True
     base_url: str = ""
     temperature: float = 0.2
     vision_enabled: bool = True
+    free_only: bool = True
     compat_schema_mode: bool = False
     notes: str = ""
     set_active: bool = True
@@ -84,7 +87,13 @@ class TestProfilePayload(BaseModel):
     api_key: str | None = None
     base_url: str | None = None
     temperature: float | None = 0.2
+    free_only: bool = True
     compat_schema_mode: bool = False
+
+
+class RoutewayBulkPayload(BaseModel):
+    api_key: str = ""
+    base_url: str = "https://api.routeway.ai/v1"
 
 
 class StartAgentPayload(BaseModel):
@@ -178,11 +187,12 @@ async def api_test_profile(payload: TestProfilePayload) -> dict[str, Any]:
             test_prof["base_url"] = payload.base_url
     else:
         test_prof = {
-            "provider": payload.provider or "google",
+            "provider": payload.provider or "routeway",
             "model": payload.model or "",
             "api_key": payload.api_key or "",
             "base_url": payload.base_url or "",
             "temperature": payload.temperature if payload.temperature is not None else 0.2,
+            "free_only": payload.free_only,
             "compat_schema_mode": payload.compat_schema_mode,
         }
 
@@ -191,6 +201,24 @@ async def api_test_profile(payload: TestProfilePayload) -> dict[str, Any]:
         update_profile_test_result(payload.profile_id, bool(result["ok"]), result["message_fa"])
     result["profiles_state"] = get_client_profiles_state()
     return result
+
+
+@app.get("/api/routeway/models")
+async def api_routeway_models(api_key: str = "", base_url: str = "https://api.routeway.ai/v1") -> dict[str, Any]:
+    return await fetch_routeway_free_models(api_key=api_key, base_url=base_url)
+
+
+@app.post("/api/routeway/bulk-pack")
+async def api_routeway_bulk_pack(payload: RoutewayBulkPayload) -> dict[str, Any]:
+    try:
+        state = bulk_create_routeway_free_pack(api_key=payload.api_key, base_url=payload.base_url)
+        return {
+            "ok": True,
+            "profiles_state": state,
+            "message_fa": "✅ ۵ مدل برتر رایگان Routeway (Glimmer 30B، دو مدل Gemma 4 26B، DeepSeek V4 Flash و MiniMax M2.7) به همراه مدل پشتیبان خودکار برایتان ساخته شد!",
+        }
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
 
 
 @app.get("/api/ollama/models")
