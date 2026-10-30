@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Browser Use AI Studio — دستیار هوشمند مرورگر (بدون نیاز به کدنویسی)</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top Header with Instant Multi-LLM Switcher -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-logo">🌐</div>
+        <div>
+          <div class="brand-title">
+            <span>استودیو Browser Use</span>
+            <span class="badge badge-amber">نسخه فارسی بدون کدنویسی</span>
+          </div>
+          <div class="brand-sub">ربات هوشمند وب‌گردی، کلیک، استخراج اطلاعات و انجام خودکار کارها در مرورگر</div>
+        </div>
+      </div>
+
+      <div class="topbar-controls">
+        <!-- Instant LLM Switcher -->
+        <div class="llm-switcher-pill" title="از این قسمت می‌توانید در هر لحظه بین کلیدها و مدل‌های مختلف خود سوییچ کنید">
+          <span class="llm-switcher-label">🤖 هوش مصنوعی فعال:</span>
+          <select id="headerProfileSelect" class="llm-switcher-select">
+            <option value="">هنوز کلیدی ثبت نشده...</option>
+          </select>
+          <button class="btn btn-sm" id="btnQuickAddKey" title="افزودن کلید یا مدل جدید">➕ کلید جدید</button>
+        </div>
+
+        <!-- Browser Status Badge -->
+        <div class="status-chip" id="browserHealthChip" title="وضعیت شناسایی مرورگر روی سیستم شما">
+          <span class="status-dot" id="browserHealthDot"></span>
+          <span id="browserHealthText">در حال بررسی سیستم...</span>
+        </div>
+
+        <!-- Theme Toggle -->
+        <button class="btn btn-sm" id="btnToggleTheme" title="تغییر حالت شب و روز">☀️ / 🌙</button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="workspace">🚀 میز کار هوشمند (اجرای ربات)</button>
+      <button class="nav-tab" data-tab="profiles">🔑 کلیدها و مدل‌ها (API Keys) <span class="tab-count" id="profilesCountBadge">0</span></button>
+      <button class="nav-tab" data-tab="templates">✨ دستورهای آماده</button>
+      <button class="nav-tab" data-tab="python">🐍 کد پایتون (کدساز و اجرا)</button>
+      <button class="nav-tab" data-tab="settings">⚙️ تنظیمات مرورگر و سیستم</button>
+      <button class="nav-tab" data-tab="guide">📚 راهنمای کامل (به زبان ساده)</button>
+      <button class="nav-tab" data-tab="history">🕘 تاریخچه <span class="tab-count" id="historyCountBadge">0</span></button>
+    </nav>
+
+    <main class="main-container">
+      <!-- Onboarding Banner (shown automatically until user adds their first LLM profile) -->
+      <div class="onboarding-banner" id="onboardingBanner" style="display: none;">
+        <div>
+          <h3>👋 خوش آمدید! برای شروع کار هیچ نیازی به دانش برنامه‌نویسی ندارید</h3>
+          <p>
+            فقط کافیست <strong>۱)</strong> در بخش «کلیدها و مدل‌ها» کلید هوش مصنوعی خود (مثل <strong>Google Gemini رایگان</strong>، <strong>OpenRouter</strong>، <strong>Groq برای Llama</strong> یا <strong>Ollama لوکال بدون کلید</strong>) را ثبت کنید، و <strong>۲)</strong> کار مورد نظرتان را به فارسی بنویسید!
+          </p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="switchTab('profiles')">🔑 گام اول: ثبت کلید هوش مصنوعی</button>
+          <button class="btn" onclick="switchTab('guide')">📚 مطالعه راهنمای ۲ دقیقه‌ای</button>
+        </div>
+      </div>
+
+      <!-- ===================== TAB 1: WORKSPACE ===================== -->
+      <section class="tab-panel active" id="tab-workspace">
+        <div class="card composer-box">
+          <div class="card-header">
+            <div>
+              <div class="card-title">✍️ دستور خود را به زبان ساده بنویسید</div>
+              <div class="card-subtitle">ربات دقیقاً مثل یک انسان مرورگر را باز می‌کند، وارد سایت‌ها می‌شود، جستجو و کلیک می‌کند و نتیجه را برایتان می‌آورد.</div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-sm" onclick="switchTab('templates')">✨ انتخاب از دستورهای آماده</button>
+              <button class="btn btn-sm" id="btnClearTask">پاک کردن متن</button>
+            </div>
+          </div>
+
+          <textarea
+            id="taskInput"
+            class="task-textarea"
+            placeholder="مثال: وارد سایت news.ycombinator.com شو، ۵ خبر اول صفحه را بخوان و عنوان و خلاصه هر کدام را به زبان فارسی برایم لیست کن..."
+          ></textarea>
+
+          <div class="quick-chips">
+            <span style="font-size: 12px; color: var(--text-muted);">افزودن سریع به دستور:</span>
+            <button class="chip" data-append=" نتیجه نهایی را در قالب یک جدول مرتب فارسی بنویس.">📊 خروجی جدولی فارسی</button>
+            <button class="chip" data-append=" قیمت، مشخصات کلیدی و لینک مستقیم هر مورد را هم ذکر کن.">💰 همراه با قیمت و لینک</button>
+            <button class="chip" data-append=" اگر پنجره کوکی یا تبلیغ باز شد آن را ببند و ادامه بده.">🚫 بستن پاپ‌آپ‌ها</button>
+            <button class="chip" data-append=" خلاصه دقیق و نکته‌وار به زبان فارسی ساده ارائه بده.">📝 خلاصه نکته‌وار</button>
+          </div>
+
+          <div class="composer-toolbar">
+            <div class="quick-toggles">
+              <label class="toggle-item" title="وقتی تیک داشته باشد، پنجره واقعی کروم/اج روی صفحه باز می‌شود تا کار ربات را زنده ببینید. اگر بردارید در پس‌زمینه (مخفی) کار می‌کند.">
+                <input type="checkbox" id="chkShowBrowser" checked />
+                <span>👁️ نمایش پنجره مرورگر</span>
+                <span class="hint-badge">؟</span>
+              </label>
+
+              <label class="toggle-item" title="در هر مرحله از صفحه وب عکس می‌گیرد و به هوش مصنوعی نشان می‌دهد. برای مدل‌های دارای بینایی (مثل Gemini، GPT، Llama 4) بسیار عالی است.">
+                <input type="checkbox" id="chkUseVision" checked />
+                <span>📸 بینایی تصویر (Vision)</span>
+                <span class="hint-badge">؟</span>
+              </label>
+
+              <label class="toggle-item" title="به هوش مصنوعی تاکید می‌کند که گزارش پایانی را حتماً به زبان فارسی روان تحویل دهد.">
+                <input type="checkbox" id="chkPersianOutput" checked />
+                <span>🇮🇷 گزارش نهایی فارسی</span>
+              </label>
+
+              <div class="toggle-item" title="حداکثر تعداد کلیکی/صفحه‌ای که ربات مجاز است طی کند (برای جلوگیری از مصرف بی‌رویه شارژ کلید)">
+                <span>🔢 سقف گام‌ها:</span>
+                <input type="number" id="numQuickMaxSteps" value="35" min="3" max="150" style="width: 58px; background: transparent; border: 1px solid var(--border-color); border-radius: 6px; padding: 2px 6px; text-align: center;" />
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <button class="btn btn-primary btn-lg" id="btnStartAgent">🚀 شروع عملیات ربات</button>
+              <button class="btn btn-warning" id="btnPauseAgent" style="display: none;">⏸️ توقف موقت</button>
+              <button class="btn btn-success" id="btnResumeAgent" style="display: none;">▶️ ادامه کار</button>
+              <button class="btn btn-danger" id="btnStopAgent" style="display: none;">⏹️ توقف کامل</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dual Live Execution Area -->
+        <div class="workspace-grid">
+          <!-- Right Column: Result + AI Steps -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">🧠 گزارش لحظه‌ای مغز ربات و نتیجه</div>
+                <div class="card-subtitle" id="agentMetaSubtitle">آماده دریافت دستور جدید</div>
+              </div>
+              <div class="status-chip">
+                <span class="status-dot" id="runStatusDot"></span>
+                <span id="runStatusText">آماده به کار</span>
+              </div>
+            </div>
+
+            <!-- Follow-up bar while running -->
+            <div id="followupBar" style="display: none; margin-bottom: 14px;">
+              <div class="input-with-btn">
+                <input type="text" id="followupInput" class="form-input" placeholder="ارسال راهنمایی یا دستور تکمیلی به ربات در حین کار..." />
+                <button class="btn btn-primary btn-sm" id="btnSendFollowup">➕ ارسال به ربات</button>
+              </div>
+            </div>
+
+            <!-- Final Result Box -->
+            <div id="finalResultBox" class="result-banner" style="display: none;">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <strong id="finalResultTitle">✅ نتیجه نهایی عملیات:</strong>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <button class="btn btn-sm" id="btnCopyResult">📋 کپی نتیجه</button>
+                  <button class="btn btn-sm" id="btnSaveResult">💾 ذخیره فایل گزارش</button>
+                  <a class="btn btn-sm btn-success" id="btnDownloadGif" href="#" target="_blank" style="display: none;">🎞️ مشاهده GIF مراحل</a>
+                </div>
+              </div>
+              <div class="result-content" id="finalResultText"></div>
+            </div>
+
+            <!-- Steps Timeline -->
+            <div id="stepsContainer" class="steps-list">
+              <div class="empty-state">
+                <div class="empty-icon">🤖</div>
+                <div><strong>مراحل کار ربات اینجا نمایش داده می‌شود</strong></div>
+                <p style="font-size: 13px; margin-top: 4px;">
+                  به محض شروع عملیات، فکرهای هوش مصنوعی، سایت‌هایی که باز می‌کند و دکمه‌هایی که کلیک می‌کند گام‌به‌گام در این ستون ثبت می‌شوند.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Left Column: Live Browser Screenshot & Console -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">🖥️ نمای زنده صفحه مرورگر</div>
+                <div class="card-subtitle">آخرین تصویر دیده‌شده توسط هوش مصنوعی (برای بزرگ‌نمایی روی تصویر کلیک کنید)</div>
+              </div>
+            </div>
+
+            <div class="browser-frame">
+              <div class="browser-chrome">
+                <div class="browser-dots"><span></span><span></span><span></span></div>
+                <div class="browser-address" id="liveUrlBar">about:blank</div>
+              </div>
+              <div class="browser-viewport" id="liveViewport">
+                <div class="empty-state" id="liveEmptyState">
+                  <div class="empty-icon">🖼️</div>
+                  <div>تصویر زنده مرورگر حین انجام کار در اینجا نمایش داده می‌شود</div>
+                </div>
+                <img id="liveScreenshotImg" alt="نمای زنده مرورگر" style="display: none;" />
+              </div>
+            </div>
+
+            <div style="margin-top: 14px;">
+              <div style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">📜 گزارش رویدادهای سیستم:</div>
+              <div class="logs-box" id="liveLogsBox">سیستم آماده است.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== TAB 2: MULTI-LLM & API KEYS ===================== -->
+      <section class="tab-panel" id="tab-profiles">
+        <div class="profiles-layout">
+          <!-- Saved Profiles List + Fallback Selector -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">🗂️ کلیدها و مدل‌های ذخیره‌شده شما</div>
+                <div class="card-subtitle">هر تعداد کلید از هر سرویسی دارید اضافه کنید و با یک کلیک بین آن‌ها جابه‌جا شوید!</div>
+              </div>
+              <button class="btn btn-sm btn-primary" id="btnResetProfileForm">➕ ساخت پروفایل جدید</button>
+            </div>
+
+            <!-- Automatic Fallback LLM Selector -->
+            <div style="background: var(--bg-surface-2); border: 1px solid var(--border-color); border-radius: 11px; padding: 12px 14px; margin-bottom: 16px;">
+              <label class="form-label" style="margin-bottom: 4px;">🛡️ مدل پشتیبان خودکار (در صورت تمام شدن سهمیه یا خطای کلید اول):</label>
+              <select id="fallbackProfileSelect" class="form-select">
+                <option value="">بدون مدل پشتیبان (فقط از مدل فعال استفاده شود)</option>
+              </select>
+              <div class="form-help">
+                ویژگی فوق‌العاده برای وقتی چند LLM دارید: اگر کلید اول وسط کار به خطای محدودیت برخورد کند، برنامه خودکار به این کلید دوم سوییچ می‌کند!
+              </div>
+            </div>
+
+            <div id="profilesListContainer"></div>
+          </div>
+
+          <!-- Add / Edit Profile Wizard -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title" id="profileFormTitle">➕ افزودن کلید API یا مدل جدید</div>
+                <div class="card-subtitle">ابتدا سرویس هوش مصنوعی خود را از کارت‌های زیر انتخاب کنید تا راهنمای همان سرویس نمایش داده شود:</div>
+              </div>
+            </div>
+
+            <!-- 12 Provider Cards -->
+            <div class="provider-grid" id="providerCardsGrid"></div>
+
+            <!-- Dynamic Provider Persian Explanation Box -->
+            <div class="provider-guide-box" id="providerGuideBox">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <strong id="providerGuideTitle">راهنمای سرویس</strong>
+                <a href="#" target="_blank" rel="noopener" class="btn btn-sm btn-primary" id="providerKeyLinkBtn">🔑 دریافت کلید از سایت رسمی ↗</a>
+              </div>
+              <p id="providerSummaryText" style="margin-top: 6px; font-weight: 500;"></p>
+              <div class="provider-guide-steps" id="providerGuideSteps"></div>
+            </div>
+
+            <!-- Profile Form Fields -->
+            <input type="hidden" id="profIdInput" value="" />
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">نام دلخواه برای شناسایی این کلید:</label>
+                <input type="text" id="profNameInput" class="form-input" placeholder="مثلاً: جمینای رایگان ۱  یا  Llama 4 در Groq" />
+                <div class="form-help">این نام در منوی سوییچ سریع بالای صفحه نمایش داده می‌شود.</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">مدل‌های پیشنهادی آماده:</label>
+                <select id="profSuggestedModelSelect" class="form-select"></select>
+                <div class="form-help">یکی را انتخاب کنید یا نام دقیق هر مدل دلخواهی را در کادر زیر بنویسید.</div>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">نام دقیق مدل (قابل تایپ آزاد):</label>
+                <div class="input-with-btn">
+                  <input type="text" id="profModelInput" class="form-input ltr" placeholder="gemini-2.5-flash" />
+                  <button type="button" class="btn btn-sm" id="btnScanOllama" style="display: none;">🔄 اسکن Ollama</button>
+                </div>
+                <div class="form-help" id="modelFieldHelp">می‌توانید نام هر مدل جدیدی را هم مستقیماً اینجا تایپ کنید.</div>
+              </div>
+
+              <div class="form-group" id="apiKeyGroup">
+                <label class="form-label">کلید API (محرمانه در سیستم خودتان ذخیره می‌شود):</label>
+                <div class="input-with-btn">
+                  <input type="password" id="profApiKeyInput" class="form-input ltr" placeholder="AIzaSy..." autocomplete="off" />
+                  <button type="button" class="btn btn-sm" id="btnToggleKeyVisibility" title="نمایش / مخفی کردن کلید">👁️</button>
+                </div>
+                <div class="form-help" id="apiKeyFieldHelp">کلیدها فقط در پوشه data روی کامپیوتر شما ذخیره می‌شوند.</div>
+              </div>
+            </div>
+
+            <div class="form-group" id="baseUrlGroup" style="display: none;">
+              <label class="form-label">آدرس سرور / Base URL:</label>
+              <input type="text" id="profBaseUrlInput" class="form-input ltr" placeholder="https://..." />
+              <div class="quick-chips" id="baseUrlPresetsRow" style="display: none;"></div>
+              <div class="form-help">برای سرویس‌های واسط ایرانی (مثل AvalAI و GapGPT)، OpenRouter یا Ollama/LM Studio کاربرد دارد.</div>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">دقت و خلاقیت مدل (Temperature): <span id="tempValLabel">0.2</span></label>
+                <input type="range" id="profTempInput" min="0" max="1" step="0.1" value="0.2" style="width: 100%; accent-color: var(--accent);" />
+                <div class="form-help">عدد ۰.۱ تا ۰.۳ برای وب‌گردی دقیق‌ترین عملکرد را دارد (کمترین خطا در کلیک).</div>
+              </div>
+
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 8px; justify-content: center;">
+                <label class="toggle-item">
+                  <input type="checkbox" id="profVisionChk" checked />
+                  <span>این مدل قابلیت دیدن عکس (Vision) دارد</span>
+                </label>
+                <label class="toggle-item" id="compatModeWrap" style="display: none;" title="اگر از مدل‌های متن‌باز روی سرورهای سفارشی یا LM Studio استفاده می‌کنید که خطای JSON می‌دهند، این تیک را بزنید.">
+                  <input type="checkbox" id="profCompatChk" />
+                  <span>حالت سازگاری بالا برای مدل‌های متن‌باز سفارشی</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="testResultInline" style="display: none; margin-bottom: 14px;" class="provider-guide-box"></div>
+
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button class="btn btn-primary" id="btnSaveProfile">💾 ذخیره و فعال‌سازی این پروفایل</button>
+              <button class="btn btn-success" id="btnTestFormProfile">🧪 تست سلامت همین کلید</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== TAB 3: READY TEMPLATES ===================== -->
+      <section class="tab-panel" id="tab-templates">
+        <div class="card" style="margin-bottom: 18px;">
+          <div class="card-title">✨ دستورهای آماده و کاربردی (شروع با یک کلیک)</div>
+          <div class="card-subtitle">روی هر کارت کلیک کنید تا متن دستور در میز کار قرار بگیرد؛ سپس می‌توانید نام سایت یا کالا را به دلخواه خودتان عوض کنید و دکمه شروع را بزنید!</div>
+        </div>
+        <div class="templates-grid" id="templatesGrid"></div>
+      </section>
+
+      <!-- ===================== TAB 4: PYTHON PLAYGROUND ===================== -->
+      <section class="tab-panel" id="tab-python">
+        <div class="card" style="margin-bottom: 18px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🐍 کدساز خودکار و اجرای مستقیم کدهای پایتون</div>
+              <div class="card-subtitle">
+                شما نیازی به نوشتن کد ندارید! اما هر دستوری در میز کار بنویسید، کد پایتون معادلش اینجا ساخته می‌شود. همچنین اگر کدی از گیت‌هاب یا اینترنت دارید می‌توانید همین‌جا بدون نصب برنامه دیگری اجرا کنید (کلید فعال شما خودکار به کد تزریق می‌شود).
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-sm" id="btnRegenerateCode">🔄 تولید کد از دستور فعلی میز کار</button>
+              <button class="btn btn-sm" id="btnCopyCode">📋 کپی کد</button>
+              <button class="btn btn-sm" id="btnSavePyFile">💾 ذخیره فایل .py</button>
+            </div>
+          </div>
+
+          <textarea id="pythonCodeEditor" class="code-editor" spellcheck="false"></textarea>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; flex-wrap: wrap; gap: 10px;">
+            <span style="font-size: 13px; color: var(--text-secondary);">
+              💡 هنگام زدن دکمه اجرا، کلید API پروفایل فعال شما به صورت متغیر محیطی (Environment Variable) در اختیار اسکریپت قرار می‌گیرد.
+            </span>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary" id="btnRunPythonCode">▶️ اجرای مستقیم همین کد پایتون</button>
+              <button class="btn btn-danger" id="btnStopPythonCode" style="display: none;">⏹️ توقف اسکریپت</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title" style="margin-bottom: 10px;">🖥️ خروجی ترمینال پایتون:</div>
+          <div class="terminal-output" id="pythonTerminalOutput">آماده اجرای کد پایتون...</div>
+        </div>
+      </section>
+
+      <!-- ===================== TAB 5: BROWSER & SYSTEM SETTINGS ===================== -->
+      <section class="tab-panel" id="tab-settings">
+        <div class="profiles-layout">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">🌐 تنظیمات مرورگر و رفتار ربات</div>
+                <div class="card-subtitle">کنترل نحوه باز شدن مرورگر، لاگین‌ها و سرعت عملکرد هوش مصنوعی</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">انتخاب مرورگر مورد استفاده:</label>
+              <select id="setBrowserChannel" class="form-select">
+                <option value="auto">تشخیص خودکار (پیشنهادی — اولویت با Chrome و سپس Edge ویندوز)</option>
+                <option value="chrome">Google Chrome (گوگل کروم)</option>
+                <option value="msedge">Microsoft Edge (مرورگر پیش‌فرض ویندوز ۱۰ و ۱۱)</option>
+                <option value="brave">Brave Browser (مرورگر بریو)</option>
+                <option value="chromium">Chromium / Playwright</option>
+                <option value="custom">معرفی دستی مسیر فایل اجرایی مرورگر (.exe)</option>
+              </select>
+              <div class="form-help">در ویندوز ۱۰ و ۱۱ حتی اگر کروم نداشته باشید، مرورگر Microsoft Edge از قبل نصب است و ربات با آن عالی کار می‌کند!</div>
+            </div>
+
+            <div class="form-group" id="customExeGroup" style="display: none;">
+              <label class="form-label">مسیر فایل اجرایی مرورگر (مثلاً chrome.exe):</label>
+              <div class="input-with-btn">
+                <input type="text" id="setExecutablePath" class="form-input ltr" placeholder="C:\Program Files\Google\Chrome\Application\chrome.exe" />
+                <button type="button" class="btn btn-sm" id="btnBrowseExe">📂 انتخاب فایل</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">پوشه پروفایل کاربری کروم (اختیاری — برای استفاده از سایت‌هایی که قبلاً لاگین کرده‌اید):</label>
+              <div class="input-with-btn">
+                <input type="text" id="setUserDataDir" class="form-input ltr" placeholder="خالی بگذارید تا یک پروفایل تمیز و امن موقت باز شود" />
+                <button type="button" class="btn btn-sm" id="btnBrowseUserData">📂 انتخاب پوشه</button>
+              </div>
+              <div class="form-help" id="chromeProfileHintText">
+                ⚠️ نکته مهم: اگر مسیر پروفایل اصلی کروم خود را وارد می‌کنید، قبل از شروع کار ربات باید تمام پنجره‌های باز کروم خود را ببندید تا قفل پروفایل آزاد باشد.
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">حداکثر تعداد گام‌های مجاز (Max Steps):</label>
+                <input type="number" id="setMaxSteps" class="form-input" min="3" max="200" value="35" />
+                <div class="form-help">جلوگیری از چرخش بی‌انتها در سایت‌های شلوغ (عدد ۲۵ تا ۵۰ ایده‌آل است).</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">حداکثر عملیات در هر گام:</label>
+                <input type="number" id="setMaxActions" class="form-input" min="1" max="10" value="4" />
+                <div class="form-help">اجازه می‌دهد ربات در یک نوبت مثلاً هم نام کاربری و هم رمز را پر کند.</div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+              <label class="toggle-item">
+                <input type="checkbox" id="setKeepAlive" />
+                <span>🔓 باز نگه داشتن پنجره مرورگر پس از پایان کار ربات (مفید برای ادامه خرید یا بررسی دستی صفحه)</span>
+              </label>
+
+              <label class="toggle-item">
+                <input type="checkbox" id="setFlashMode" />
+                <span>⚡ حالت فوق‌سریع (Flash Mode — کاهش تفکر طولانی برای سرعت بیشتر و مصرف کمتر توکن)</span>
+              </label>
+
+              <label class="toggle-item">
+                <input type="checkbox" id="setEnablePlanning" checked />
+                <span>🗺️ برنامه‌ریزی هوشمند چندمرحله‌ای (Planning — مناسب کارهای پیچیده و تحقیقی)</span>
+              </label>
+
+              <label class="toggle-item">
+                <input type="checkbox" id="setGenerateGif" />
+                <span>🎞️ ساخت خودکار فایل انیمیشن GIF از تمام مراحل کار ربات در پوشه outputs</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">دستورالعمل ثابت همیشگی برای ربات (اختیاری):</label>
+              <textarea id="setCustomInstructions" class="task-textarea" style="min-height: 76px;" placeholder="مثال: همیشه اعداد و قیمت‌ها را به تومان تبدیل کن و منابع را با لینک دقیق بنویس."></textarea>
+            </div>
+
+            <button class="btn btn-primary" id="btnSaveSettings">💾 ذخیره تنظیمات</button>
+          </div>
+
+          <!-- System Doctor Card -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">🩺 عیب‌یاب و سلامت سیستم (System Doctor)</div>
+                <div class="card-subtitle">بررسی خودکار پایتون، کتابخانه Browser Use و مرورگرهای نصب‌شده روی کامپیوتر شما</div>
+              </div>
+              <button class="btn btn-sm" id="btnRefreshDoctor">🔄 بررسی مجدد</button>
+            </div>
+
+            <div id="doctorDetailsBox" style="display: flex; flex-direction: column; gap: 10px;"></div>
+
+            <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+              <div style="font-size: 14px; font-weight: 700; margin-bottom: 6px;">📦 نصب مرورگر مستقل Chromium (فقط در صورت نداشتن Chrome یا Edge)</div>
+              <p style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 12px;">
+                اگر روی سیستم خود گوگل کروم یا مایکروسافت اج دارید نیازی به این دکمه نیست. در غیر این صورت، با زدن دکمه زیر مرورگر مستقل Chromium به صورت خودکار دانلود و نصب می‌شود:
+              </p>
+              <button class="btn btn-warning" id="btnInstallChromium">⬇️ نصب خودکار مرورگر Chromium</button>
+              <div class="logs-box ltr" id="chromiumInstallLogs" style="display: none; margin-top: 10px;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== TAB 6: COMPLETE PERSIAN BEGINNER GUIDE ===================== -->
+      <section class="tab-panel" id="tab-guide">
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-title">📚 راهنمای کامل و به زبان ساده (مخصوص استفاده بدون دانش برنامه‌نویسی)</div>
+          <div class="card-subtitle">هر آنچه لازم است درباره این ابزار، انواع هوش مصنوعی (LLM)، کلیدهای API و قلق‌های دستور دادن به ربات بدانید در همین صفحه جمع‌آوری شده است.</div>
+        </div>
+
+        <div class="guide-grid">
+          <div class="card guide-card">
+            <h3>۱. این برنامه دقیقاً چه کاری انجام می‌دهد؟</h3>
+            <ul class="guide-list">
+              <li><strong>Browser Use چیست؟</strong> یک فناوری متن‌باز فوق‌پیشرفته است که به مدل‌های هوش مصنوعی اجازه می‌دهد مثل یک انسان واقعی مرورگر وب را باز کنند، سایت‌ها را ببینند، در گوگل جستجو کنند، روی دکمه‌ها کلیک کنند، فرم پر کنند و اطلاعات را استخراج کنند.</li>
+              <li><strong>چرا به کلید API نیاز دارد؟</strong> خودِ Browser Use «دست و چشم» ربات است، اما برای «فکر کردن و تصمیم‌گیری» به یک مغز هوش مصنوعی (مثل Gemini، GPT، Llama یا DeepSeek) وصل می‌شود. شما می‌توانید هر مغزی که دارید به آن وصل کنید!</li>
+              <li><strong>نحوه اجرای برنامه در ویندوز:</strong> هر بار فقط روی فایل <code>start.bat</code> دابل‌کلیک کنید! بار اول خودش همه پیش‌نیازها را نصب می‌کند و از دفعات بعد در چند ثانیه پنجره گرافیکی برنامه باز می‌شود.</li>
+            </ul>
+          </div>
+
+          <div class="card guide-card">
+            <h3>۲. کدام هوش مصنوعی (LLM) را انتخاب کنم؟</h3>
+            <table class="guide-table">
+              <thead>
+                <tr>
+                  <th>سرویس</th>
+                  <th>هزینه</th>
+                  <th>بینایی</th>
+                  <th>مناسب برای چه کاری؟</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Google Gemini</strong></td>
+                  <td><span class="badge badge-emerald">رایگان دارد</span></td>
+                  <td>✅ عالی</td>
+                  <td>بهترین شروع! مدل <code>gemini-2.5-flash</code> سریع و دقیق است.</td>
+                </tr>
+                <tr>
+                  <td><strong>Groq (Llama 4)</strong></td>
+                  <td><span class="badge badge-emerald">رایگان دارد</span></td>
+                  <td>✅ دارد</td>
+                  <td>اجرای فوق‌سریع مدل‌های <strong>Llama 4</strong> با سرعت شگفت‌انگیز.</td>
+                </tr>
+                <tr>
+                  <td><strong>OpenRouter</strong></td>
+                  <td><span class="badge badge-cyan">رایگان + شارژی</span></td>
+                  <td>✅ بسته به مدل</td>
+                  <td>یک کلید برای دسترسی به ۳۰۰+ مدل (Llama، Claude، GPT، Qwen).</td>
+                </tr>
+                <tr>
+                  <td><strong>Ollama (لوکال)</strong></td>
+                  <td><span class="badge badge-emerald">۱۰۰٪ رایگان</span></td>
+                  <td>بسته به مدل</td>
+                  <td>اجرا روی کارت گرافیک/پردازنده خودتان بدون نیاز به کلید و اینترنت!</td>
+                </tr>
+                <tr>
+                  <td><strong>سرویس‌های ایرانی</strong></td>
+                  <td><span class="badge badge-amber">ریالی</span></td>
+                  <td>✅ عالی</td>
+                  <td>اتصال راحت بدون دغدغه تحریم (مثل AvalAI یا GapGPT).</td>
+                </tr>
+                <tr>
+                  <td><strong>DeepSeek</strong></td>
+                  <td><span class="badge badge-cyan">بسیار ارزان</span></td>
+                  <td>❌ متنی</td>
+                  <td>عالی و بسیار کم‌هزینه برای استخراج متن و جدول از صفحات وب.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card guide-card">
+            <h3>۳. چطور بین چند کلید یا چند LLM سوییچ کنم؟</h3>
+            <ul class="guide-list">
+              <li><strong>ذخیره نامحدود کلید:</strong> در تب «🔑 کلیدها و مدل‌ها» می‌توانید مثلاً ۲ کلید رایگان گوگل، یک کلید Groq برای Llama، یک کلید OpenRouter و یک مدل لوکال Ollama ثبت کنید و برای هر کدام نام دلخواه بگذارید.</li>
+              <li><strong>سوییچ یک‌کلیکی در نوار بالا:</strong> در بالاترین قسمت برنامه منوی <strong>«🤖 هوش مصنوعی فعال»</strong> همیشه جلوی دست شماست؛ هر وقت خواستید با یک کلیک مغز ربات را عوض کنید!</li>
+              <li><strong>مدل پشتیبان خودکار (Fallback):</strong> در تب کلیدها می‌توانید یک «مدل پشتیبان» هم انتخاب کنید تا اگر کلید اول شما وسط کار سهمیه‌اش تمام شد، ربات متوقف نشود و خودکار با کلید دوم ادامه دهد!</li>
+            </ul>
+          </div>
+
+          <div class="card guide-card">
+            <h3>۴. معنی گزینه‌های مهم برنامه به زبان ساده</h3>
+            <ul class="guide-list">
+              <li><strong>👁️ نمایش پنجره مرورگر ( در برابر Headless ):</strong> وقتی تیک دارد، پنجره کروم باز می‌شود و حرکت و کلیک ربات را به چشم می‌بینید (و حتی اگر کپچا یا ورود رمزی آمد می‌توانید با دکمه «توقف موقت» خودتان رد کنید و «ادامه» بزنید!). اگر تیک را بردارید مخفیانه در پس‌زمینه کار می‌کند.</li>
+              <li><strong>📸 بینایی تصویر (Vision):</strong> وقتی روشن است، علاوه بر متن صفحه، تصویر صفحه هم برای هوش مصنوعی ارسال می‌شود تا دکمه‌های گرافیکی را دقیق ببیند. فقط برای مدل‌هایی که عکس قبول نمی‌کنند (مثل DeepSeek متنی) آن را خاموش کنید.</li>
+              <li><strong>🔢 سقف گام‌ها (Max Steps):</strong> هر کلیک یا اسکرول یک «گام» است. عدد ۳۵ یعنی اگر ربات بعد از ۳۵ حرکت به جواب نرسید متوقف شود تا شارژ کلید شما بی‌خود مصرف نشود.</li>
+            </ul>
+          </div>
+
+          <div class="card guide-card">
+            <h3>۵. قلق نوشتن دستور (پرامپت) حرفه‌ای بدون کدنویسی</h3>
+            <ul class="guide-list">
+              <li>✅ <strong>آدرس سایت را مشخص بگویید:</strong> به جای «قیمت لپ‌تاپ دربیار» بنویسید: «به سایت torob.com برو، لپ‌تاپ Asus TUF را جستجو کن و ارزان‌ترین ۵ فروشگاه را با قیمت بنویس.»</li>
+              <li>✅ <strong>خروجی دلخواهتان را دقیق بخواهید:</strong> در انتهای دستور اضافه کنید: «نتیجه را به صورت لیست شماره‌گذاری‌شده به فارسی همراه با لینک هر مورد بنویس.»</li>
+              <li>✅ <strong>مداخله انسانی در مواقع لازم:</strong> اگر سایتی نیاز به کد پیامک یا کپچای سخت داشت، دکمه <strong>«⏸️ توقف موقت»</strong> را بزنید، داخل پنجره مرورگر لاگین را انجام دهید و سپس <strong>«▶️ ادامه کار»</strong> را بزنید!</li>
+            </ul>
+          </div>
+
+          <div class="card guide-card">
+            <h3>۶. رفع خطاهای رایج در ۳۰ ثانیه</h3>
+            <ul class="guide-list">
+              <li><strong>خطای ۴۰۳ (موقعیت جغرافیایی):</strong> سرویس‌های Google Gemini و OpenAI به آی‌پی ایران حساس هستند. روشن بودن تحریم‌شکن یا فیلترشکن سیستم را بررسی کنید (یا از سرویس‌های واسط ایرانی در بخش «سفارشی / ایرانی» استفاده کنید).</li>
+              <li><strong>خطای ۴۲۹ (سهمیه یا Rate Limit):</strong> یعنی سقف درخواست در دقیقه کلید رایگان شما پر شده است. یا ۱ دقیقه صبر کنید یا از منوی بالا به کلید بعدی خود سوییچ کنید!</li>
+              <li><strong>باز نشدن کروم با پروفایل شخصی:</strong> کروم اجازه نمی‌دهد هم‌زمان هم خودتان بازش کرده باشید و هم ربات به همان پروفایل وصل شود. یا فیلد «پروفایل کاربری» را در تنظیمات خالی بگذارید (پیشنهادی) یا قبل از شروع، کروم‌های باز را ببندید.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== TAB 7: RUN HISTORY ===================== -->
+      <section class="tab-panel" id="tab-history">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🕘 تاریخچه عملیات‌های قبلی</div>
+              <div class="card-subtitle">نتایج استخراج‌شده قبلی شما در اینجا ذخیره می‌شوند تا هر زمان خواستید کپی یا دوباره اجرا کنید.</div>
+            </div>
+            <button class="btn btn-sm btn-danger" id="btnClearHistory">🗑️ پاک کردن تاریخچه</button>
+          </div>
+          <div id="historyListContainer"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Screenshot Fullscreen Modal -->
+  <div class="modal-backdrop" id="screenshotModal">
+    <img id="modalScreenshotImg" alt="بزرگ‌نمایی صفحه مرورگر" />
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
