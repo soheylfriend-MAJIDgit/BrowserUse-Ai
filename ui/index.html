@@ -57,14 +57,14 @@
       <!-- Onboarding Banner (shown automatically until user adds their first LLM profile) -->
       <div class="onboarding-banner" id="onboardingBanner" style="display: none;">
         <div>
-          <h3>👋 خوش آمدید! همه‌چیز برای کلید رایگان Routeway AI شما آماده شده است</h3>
+          <h3>👋 خوش آمدید! بخش‌های مجزای رایگان برای Routeway و OpenRouter آماده است</h3>
           <p>
-            فقط کافیست <strong>۱)</strong> در بخش «کلیدها و مدل‌ها» کلید <strong>Routeway</strong> خود را وارد کنید و دکمه <strong>«⚡ ساخت خودکار پک ۵ مدل رایگان Routeway»</strong> را بزنید تا همه مدل‌های رایگان یک‌جا آماده سوییچ شوند، و <strong>۲)</strong> دستور خود را به فارسی بنویسید!
+            می‌توانید کلید <strong>Routeway</strong> و کلید <strong>OpenRouter</strong> (`sk-or-v1-...`) خود را <strong>هر دو به صورت جداگانه</strong> در تب «کلیدها و مدل‌ها» ثبت کنید تا ۱۰ مدل رایگان آماده سوییچ یک‌کلیکی داشته باشید!
           </p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <button class="btn btn-primary" onclick="switchTab('profiles')">🔑 گام اول: وارد کردن کلید رایگان Routeway</button>
-          <button class="btn" onclick="switchTab('guide')">📚 راهنمای مدل‌های رایگان Routeway</button>
+          <button class="btn btn-primary" onclick="switchTab('profiles')">🔑 گام اول: ثبت کلیدهای Routeway و OpenRouter</button>
+          <button class="btn" onclick="switchTab('guide')">📚 راهنمای کامل مدل‌های رایگان</button>
         </div>
       </div>
 
@@ -281,6 +281,7 @@
                 <div class="input-with-btn">
                   <input type="text" id="profModelInput" class="form-input ltr" placeholder="muse-glimmer-30b:free" />
                   <button type="button" class="btn btn-sm" id="btnScanRouteway" style="display: none;" title="دریافت مستقیم جدیدترین مدل‌های ۱۰۰٪ رایگان از سایت Routeway">🔄 بروزرسانی لیست رایگان</button>
+                  <button type="button" class="btn btn-sm" id="btnScanOpenRouter" style="display: none;" title="دریافت مستقیم جدیدترین مدل‌های ۱۰۰٪ رایگان از سایت OpenRouter">🔄 بروزرسانی لیست رایگان OpenRouter</button>
                   <button type="button" class="btn btn-sm" id="btnScanOllama" style="display: none;">🔄 اسکن Ollama</button>
                 </div>
                 <div class="form-help" id="modelFieldHelp">می‌توانید نام هر مدل جدیدی را هم مستقیماً اینجا تایپ کنید.</div>
@@ -337,6 +338,20 @@
                 فقط یک‌بار کلید Routeway خود را در کادر بالا وارد کنید و دکمه زیر را بزنید تا <strong>۵ مدل رایگان منتخب</strong> (شامل <code>Glimmer 30B</code>، دو مدل <code>Gemma 4 26B</code>، <code>DeepSeek V4 Flash</code> و <code>MiniMax M2.7</code>) یک‌جا ساخته شوند + مدل پشتیبان خودکار هم تنظیم شود تا در یک ثانیه بین همه‌شان سوییچ کنید!
               </p>
               <button type="button" class="btn btn-success" id="btnCreateRoutewayPack">⚡ ساخت خودکار پک ۵ مدل رایگان Routeway با همین کلید</button>
+            </div>
+
+            <!-- Special Separate 1-click Bulk Pack Box for OpenRouter Free Users -->
+            <div id="openrouterBulkBox" style="display: none; background: linear-gradient(135deg, rgba(139, 92, 246, 0.16), rgba(99, 102, 241, 0.10)); border: 1px solid rgba(139, 92, 246, 0.50); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
+                <div style="font-size: 14px; font-weight: 700; color: #c4b5fd;">
+                  🎁 بخش اختصاصی و جداگانه برای کلید رایگان OpenRouter شما (<code>sk-or-v1-...</code>):
+                </div>
+                <a href="https://openrouter.ai/settings/privacy" target="_blank" rel="noopener" class="btn btn-sm" title="برای کار کردن مدل‌های رایگان در OpenRouter، یک‌بار گزینه Enable free endpoints را در این صفحه روشن کنید">🔐 تنظیم Privacy رایگان در OpenRouter ↗</a>
+              </div>
+              <p style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 10px;">
+                کلید OpenRouter خود را در کادر بالا وارد کنید و دکمه زیر را بزنید تا <strong>۵ مدل برتر رایگان OpenRouter</strong> (روتر هوشمند <code>openrouter/free</code>، مدل بینایی اسکرین‌شات <code>NVIDIA Nemotron 3.5 Super VL</code>، <code>Google Gemma 4 31B</code>، <code>Inkling MoE</code> و <code>Nemotron 550B</code>) <strong>کاملاً جداگانه در کنار مدل‌های Routeway شما</strong> اضافه شوند!
+              </p>
+              <button type="button" class="btn btn-primary" id="btnCreateOpenRouterPack">⚡ ساخت خودکار پک ۵ مدل رایگان OpenRouter با همین کلید</button>
             </div>
 
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -512,11 +527,21 @@
 
         <div class="guide-grid">
           <div class="card guide-card" style="border-color: rgba(16, 185, 129, 0.45);">
-            <h3>⭐ راهنمای اختصاصی بخش رایگان Routeway AI (کلید شما)</h3>
+            <h3>⭐ راهنمای اختصاصی بخش رایگان Routeway AI (کلید اول شما)</h3>
             <ul class="guide-list">
               <li><strong>مدل‌های دارای بینایی صفحه (Vision) در بخش رایگان:</strong> مدل <code>muse-glimmer-30b:free</code> (ساخت Meta) و تمام ۶ نسخه <code>gemma-4-26b-a4b-it-...:free</code> (ساخت Google مثل Chimerax، Luminous، Moonlight، Darksoul، Musica و MeroMero) <strong>هم رایگان هستند ($0.00) و هم عکس صفحه مرورگر را می‌بینند!</strong></li>
               <li><strong>مدل‌های متنی فوق‌سریع در بخش رایگان:</strong> مدل‌های <code>deepseek-v4-flash:free</code> و <code>minimax-m2.7:free</code> عکس نمی‌گیرند، اما کد و متن صفحه وب را با سرعت بالا تحلیل می‌کنند (برنامه خودش هنگام انتخاب این دو مدل، ارسال عکس را خودکار خاموش می‌کند تا خطایی نگیرید!).</li>
-              <li><strong>محدودیت بخش رایگان Routeway:</strong> هر اکانت رایگان در Routeway مجاز به <strong>۲۰ درخواست در دقیقه</strong> و <strong>۲۰۰ درخواست در روز</strong> است (ساعت ۰۳:۳۰ بامداد به وقت ایران ریست می‌شود). اگر یک مدل رایگان موقتاً شلوغ بود، با یک کلیک از بالای برنامه به مدل رایگان بعدی سوییچ کنید!</li>
+              <li><strong>محدودیت بخش رایگان Routeway:</strong> هر اکانت رایگان در Routeway مجاز به <strong>۲۰ درخواست در دقیقه</strong> و <strong>۲۰۰ درخواست در روز</strong> است.</li>
+            </ul>
+          </div>
+
+          <div class="card guide-card" style="border-color: rgba(139, 92, 246, 0.55);">
+            <h3>🌟 راهنمای اختصاصی بخش رایگان OpenRouter (کلید دوم شما)</h3>
+            <ul class="guide-list">
+              <li><strong>روتر هوشمند رایگان (<code>openrouter/free</code>):</strong> بهترین گزینه شروع در OpenRouter! خودش به صورت هوشمند یک مدل رایگان فعال که هم بینایی عکس (Vision) و هم ابزار ایجنت دارد را انتخاب می‌کند.</li>
+              <li><strong>بهترین مدل بینایی اسکرین‌شات (<code>nvidia/nemotron-3.5-super-vl:free</code>):</strong> ساخت شرکت NVIDIA مخصوص دیدن اسکرین‌شات برنامه‌ها و وب‌سایت‌ها با حافظه ۱ میلیون توکنی و هزینه <code>$0.00</code>! در کنار آن <code>google/gemma-4-31b-it:free</code> و <code>thinkingmachines/inkling:free</code> هم عالی هستند.</li>
+              <li><strong>نکته طلایی اول (تنظیم Privacy در OpenRouter):</strong> در اکانت‌های جدید OpenRouter برای استفاده از مدل‌های <code>:free</code> کافیست یک‌بار وارد آدرس <code>openrouter.ai/settings/privacy</code> شوید و تیک گزینه <strong>Enable free endpoints</strong> را روشن کنید.</li>
+              <li><strong>ترکیب طلایی با Routeway:</strong> اکانت رایگان بدون شارژ OpenRouter روزانه <strong>۵۰ درخواست رایگان</strong> (۲۰ درخواست در دقیقه) می‌دهد که در کنار ۲۰۰ درخواست رایگان Routeway، جمعاً <strong>۲۵۰ درخواست رایگان روزانه</strong> با سوییچ خودکار به شما می‌دهد!</li>
             </ul>
           </div>
 

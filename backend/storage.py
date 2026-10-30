@@ -256,7 +256,7 @@ def upsert_profile(payload: dict[str, Any]) -> dict[str, Any]:
             "base_url": (payload.get("base_url") or "").strip(),
             "temperature": float(payload.get("temperature", 0.2)),
             "vision_enabled": bool(payload.get("vision_enabled", True)),
-            "free_only": bool(payload.get("free_only", True)) if provider_val == "routeway" else False,
+            "free_only": bool(payload.get("free_only", True)) if provider_val in ("routeway", "openrouter") else False,
             "compat_schema_mode": bool(payload.get("compat_schema_mode", False)),
             "notes": (payload.get("notes") or "").strip(),
             "last_test_ok": existing.get("last_test_ok") if existing else None,
@@ -336,6 +336,71 @@ def bulk_create_routeway_free_pack(
             store["active_profile_id"] = created_ids[0]
         if len(created_ids) >= 2:
             store["fallback_profile_id"] = created_ids[1]
+
+        save_profiles_store(store)
+        return get_client_profiles_state()
+
+
+def bulk_create_openrouter_free_pack(
+    api_key: str,
+    base_url: str = "https://openrouter.ai/api/v1",
+    pack_items: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Create or update the curated 5 OpenRouter Free profiles separately alongside any existing Routeway profiles."""
+    from backend.providers import OPENROUTER_CURATED_FREE_PACK
+
+    with _LOCK:
+        store = load_profiles_store()
+        clean_key = (api_key or "").strip()
+        if not clean_key:
+            for p in store["profiles"]:
+                if p.get("provider") == "openrouter" and (p.get("api_key") or "").strip():
+                    clean_key = p["api_key"].strip()
+                    break
+        if not clean_key:
+            raise ValueError("لطفاً ابتدا کلید API سایت OpenRouter (که با sk-or-v1-... شروع می‌شود) را در کادر کلید وارد کنید.")
+
+        items = pack_items or OPENROUTER_CURATED_FREE_PACK
+        created_ids: list[str] = []
+        now_ts = int(time.time())
+
+        for item in items:
+            model_id = item["model"]
+            existing = next(
+                (p for p in store["profiles"] if p.get("provider") == "openrouter" and p.get("model") == model_id),
+                None,
+            )
+            prof_id = existing["id"] if existing else f"llm_{uuid.uuid4().hex[:10]}"
+            rec: dict[str, Any] = {
+                "id": prof_id,
+                "name": item["name"],
+                "provider": "openrouter",
+                "model": model_id,
+                "api_key": clean_key,
+                "base_url": (base_url or "https://openrouter.ai/api/v1").strip(),
+                "temperature": 0.2,
+                "vision_enabled": bool(item.get("vision_enabled", True)),
+                "free_only": True,
+                "compat_schema_mode": False,
+                "notes": "بخش رایگان OpenRouter ($0.00)",
+                "last_test_ok": existing.get("last_test_ok") if existing else None,
+                "last_test_msg": existing.get("last_test_msg", "") if existing else "",
+                "updated_at": now_ts,
+                "created_at": existing.get("created_at", now_ts) if existing else now_ts,
+            }
+            if existing:
+                store["profiles"][store["profiles"].index(existing)] = rec
+            else:
+                store["profiles"].append(rec)
+            created_ids.append(prof_id)
+
+        if created_ids:
+            store["active_profile_id"] = created_ids[0]
+            existing_routeway = next((p["id"] for p in store["profiles"] if p.get("provider") == "routeway"), None)
+            if existing_routeway:
+                store["fallback_profile_id"] = existing_routeway
+            elif len(created_ids) >= 2:
+                store["fallback_profile_id"] = created_ids[1]
 
         save_profiles_store(store)
         return get_client_profiles_state()

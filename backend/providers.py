@@ -8,6 +8,11 @@ from typing import Any
 
 import httpx
 
+from backend.openrouter_llm import (
+    OPENROUTER_BASE_URL,
+    ChatOpenRouterSmart,
+    ensure_openrouter_model_allowed,
+)
 from backend.routeway_llm import (
     ROUTEWAY_BASE_URL,
     ChatRouteway,
@@ -39,6 +44,34 @@ ROUTEWAY_CURATED_FREE_PACK: list[dict[str, Any]] = [
     {
         "name": "Routeway • MiniMax M2.7 (رایگان + ایجنت متنی)",
         "model": "minimax-m2.7:free",
+        "vision_enabled": False,
+    },
+]
+
+OPENROUTER_CURATED_FREE_PACK: list[dict[str, Any]] = [
+    {
+        "name": "OpenRouter • روتر هوشمند رایگان (انتخاب خودکار + بینایی)",
+        "model": "openrouter/free",
+        "vision_enabled": True,
+    },
+    {
+        "name": "OpenRouter • Nemotron 3.5 Super VL (رایگان + بینایی اسکرین‌شات)",
+        "model": "nvidia/nemotron-3.5-super-vl:free",
+        "vision_enabled": True,
+    },
+    {
+        "name": "OpenRouter • Google Gemma 4 31B (رایگان + بینایی گوگل)",
+        "model": "google/gemma-4-31b-it:free",
+        "vision_enabled": True,
+    },
+    {
+        "name": "OpenRouter • Inkling Small MoE (رایگان + بینایی و ایجنت)",
+        "model": "thinkingmachines/inkling-small:free",
+        "vision_enabled": True,
+    },
+    {
+        "name": "OpenRouter • Nemotron 3 Ultra 550B (رایگان + متنی فوق‌قوی)",
+        "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
         "vision_enabled": False,
     },
 ]
@@ -137,6 +170,87 @@ PROVIDERS: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "openrouter",
+        "name": "OpenRouter (بخش ۱۰۰٪ رایگان • Free Models)",
+        "short_name": "OpenRouter (رایگان)",
+        "badge": "⭐ کلید شما • ۱۰۰٪ رایگان (:free)",
+        "badge_color": "violet",
+        "requires_api_key": True,
+        "supports_base_url": True,
+        "default_base_url": OPENROUTER_BASE_URL,
+        "default_model": "openrouter/free",
+        "vision_recommended": True,
+        "api_key_placeholder": "sk-or-v1-...",
+        "key_url": "https://openrouter.ai/keys",
+        "summary_fa": (
+            "تنظیم‌شده اختصاصی و جداگانه برای کلید OpenRouter شما! دارای روتر هوشمند رایگان (openrouter/free)، "
+            "مدل‌های بینایی اسکرین‌شات NVIDIA و Google، قفل ایمنی «فقط رایگان» و دکمه ساخت خودکار ۵ مدل در کنار Routeway."
+        ),
+        "guide_fa": (
+            "۱. کلید دریافتی از openrouter.ai/keys (که با sk-or-v1-... شروع می‌شود) را در کادر بالا وارد کنید.\n"
+            "۲. پیشنهاد طلایی: روی دکمه «⚡ ساخت خودکار پک ۵ مدل رایگان OpenRouter» کلیک کنید تا ۵ مدل برتر رایگان در کنار مدل‌های Routeway شما ذخیره شوند!\n"
+            "۳. نکته مهم OpenRouter برای مدل‌های رایگان: اگر هنگام تست، خطای Data Policy / Privacy دیدید، یک‌بار وارد آدرس openrouter.ai/settings/privacy شوید و گزینه Enable free endpoints را روشن کنید.\n"
+            "۴. سهمیه رایگان OpenRouter بدون شارژ: ۲۰ درخواست در دقیقه و ۵۰ درخواست رایگان در روز است (که در کنار ۲۰۰ درخواست روزانه Routeway عالی می‌شود!)."
+        ),
+        "models": [
+            {
+                "id": "openrouter/free",
+                "label": "🌟 OpenRouter Free Router (انتخاب هوشمند خودکار مدل رایگان + بینایی • $0)",
+                "vision": True,
+            },
+            {
+                "id": "nvidia/nemotron-3.5-super-vl:free",
+                "label": "NVIDIA Nemotron 3.5 Super VL (رایگان $0 • بینایی اسکرین‌شات و ایجنت • 1M)",
+                "vision": True,
+            },
+            {
+                "id": "google/gemma-4-31b-it:free",
+                "label": "Google Gemma 4 31B Instruct (رایگان $0 • بینایی گوگل • 262K)",
+                "vision": True,
+            },
+            {
+                "id": "google/gemma-4-26b-a4b-it:free",
+                "label": "Google Gemma 4 26B A4B (رایگان $0 • بینایی سریع گوگل)",
+                "vision": True,
+            },
+            {
+                "id": "thinkingmachines/inkling:free",
+                "label": "Thinking Machines: Inkling 975B MoE (رایگان $0 • بینایی + ایجنت قوی)",
+                "vision": True,
+            },
+            {
+                "id": "thinkingmachines/inkling-small:free",
+                "label": "Thinking Machines: Inkling Small (رایگان $0 • بینایی سریع + ایجنت)",
+                "vision": True,
+            },
+            {
+                "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+                "label": "NVIDIA Nemotron 3 Nano Omni 30B (رایگان $0 • بینایی چندرسانه‌ای)",
+                "vision": True,
+            },
+            {
+                "id": "nvidia/nemotron-3-ultra-550b-a55b:free",
+                "label": "NVIDIA Nemotron 3 Ultra 550B (رایگان $0 • متنی فوق‌قوی - بدون Vision)",
+                "vision": False,
+            },
+            {
+                "id": "nvidia/nemotron-3.5-lightning:free",
+                "label": "NVIDIA Nemotron 3.5 Lightning (رایگان $0 • ایجنت متنی سریع - بدون Vision)",
+                "vision": False,
+            },
+            {
+                "id": "poolside/laguna-s-2.1:free",
+                "label": "Poolside Laguna S 2.1 (رایگان $0 • ایجنت متنی و کدنویسی - بدون Vision)",
+                "vision": False,
+            },
+            {
+                "id": "meta-llama/llama-3.3-70b-instruct:free",
+                "label": "Meta Llama 3.3 70B Instruct (رایگان $0 • متنی کلاسیک - بدون Vision)",
+                "vision": False,
+            },
+        ],
+    },
+    {
         "id": "google",
         "name": "Google Gemini (گوگل جمینای)",
         "short_name": "Gemini",
@@ -160,33 +274,6 @@ PROVIDERS: list[dict[str, Any]] = [
             {"id": "gemini-2.5-pro", "label": "Gemini 2.5 Pro (بسیار قدرتمند برای کارهای پیچیده)", "vision": True},
             {"id": "gemini-2.5-flash-lite", "label": "Gemini 2.5 Flash Lite (بسیار سبک و کم‌مصرف)", "vision": True},
             {"id": "gemini-2.0-flash", "label": "Gemini 2.0 Flash (پایدار و اقتصادی)", "vision": True},
-        ],
-    },
-    {
-        "id": "openrouter",
-        "name": "OpenRouter (دسترسی به ۳۰۰+ مدل با یک کلید)",
-        "short_name": "OpenRouter",
-        "badge": "محبوب • انواع Llama / GPT / Claude",
-        "badge_color": "violet",
-        "requires_api_key": True,
-        "supports_base_url": True,
-        "default_base_url": "https://openrouter.ai/api/v1",
-        "default_model": "google/gemini-2.5-flash",
-        "vision_recommended": True,
-        "api_key_placeholder": "sk-or-v1-...",
-        "key_url": "https://openrouter.ai/keys",
-        "summary_fa": "با یک کلید OpenRouter می‌توانید بین صدها مدل مختلف (Llama 4، DeepSeek، Gemini، GPT، Claude و Qwen) جابه‌جا شوید.",
-        "guide_fa": (
-            "۱. در سایت openrouter.ai ثبت‌نام کرده و از بخش Keys یک کلید جدید (sk-or-v1-...) بسازید.\n"
-            "۲. می‌توانید از لیست مدل‌های پیشنهادی انتخاب کنید یا نام دقیق هر مدلی در OpenRouter را تایپ کنید."
-        ),
-        "models": [
-            {"id": "google/gemini-2.5-flash", "label": "Google: Gemini 2.5 Flash (بینایی عالی + ارزان)", "vision": True},
-            {"id": "meta-llama/llama-4-maverick", "label": "Meta: Llama 4 Maverick (چندرسانه‌ای و قوی)", "vision": True},
-            {"id": "meta-llama/llama-4-scout", "label": "Meta: Llama 4 Scout (سریع و دارای بینایی)", "vision": True},
-            {"id": "openai/gpt-4.1-mini", "label": "OpenAI: GPT-4.1 Mini (دقیق و سریع)", "vision": True},
-            {"id": "anthropic/claude-sonnet-4", "label": "Anthropic: Claude Sonnet 4 (قدرتمندترین در وب)", "vision": True},
-            {"id": "deepseek/deepseek-chat", "label": "DeepSeek V3 Chat (متنی و بسیار ارزان - بدون Vision)", "vision": False},
         ],
     },
     {
@@ -446,14 +533,15 @@ def build_llm_from_profile(profile: dict[str, Any]):
         return bu.ChatGoogle(**kwargs)
 
     if provider == "openrouter":
-        kwargs = {
-            "model": model,
-            "api_key": api_key,
-            "base_url": base_url or "https://openrouter.ai/api/v1",
-        }
-        if temperature is not None:
-            kwargs["temperature"] = temperature
-        return bu.ChatOpenRouter(**kwargs)
+        free_only = bool(profile.get("free_only", True))
+        checked_model = ensure_openrouter_model_allowed(model, free_only=free_only)
+        return ChatOpenRouterSmart(
+            model=checked_model,
+            api_key=api_key,
+            base_url=base_url or OPENROUTER_BASE_URL,
+            temperature=temperature if temperature is not None else 0.2,
+            free_only=free_only,
+        )
 
     if provider == "groq":
         kwargs = {"model": model, "api_key": api_key}
@@ -548,6 +636,11 @@ def translate_llm_error_fa(err: Exception | str) -> str:
 
     if "قفل «فقط مدل‌های رایگان" in msg:
         return f"🔒 {msg}"
+    if "data policy" in lower or ("privacy" in lower and "openrouter" in lower) or "free model training" in lower:
+        return (
+            "🔐 تنظیم حریم خصوصی OpenRouter برای مدل‌های رایگان فعال نیست!\n"
+            "راه‌حل ۱۰ ثانیه‌ای: وارد آدرس https://openrouter.ai/settings/privacy شوید و گزینه «Enable free endpoints» را روشن (On) کنید تا تمام مدل‌های رایگان OpenRouter برایتان باز شوند."
+        )
     if "401" in lower or "invalid_api_key" in lower or "api key not valid" in lower or "unauthorized" in lower or "authentication" in lower:
         return (
             "❌ کلید API واردشده معتبر نیست (خطای ۴۰۱).\n"
@@ -556,12 +649,12 @@ def translate_llm_error_fa(err: Exception | str) -> str:
     if "402" in lower or "insufficient" in lower or "credits" in lower or "payment" in lower:
         return (
             "💳 این مدل پولی است و حساب شما اعتبار پولی ندارد (خطای ۴۰۲).\n"
-            "حتماً مدلی را انتخاب کنید که در انتهای نامش عبارت :free وجود داشته باشد (مثل muse-glimmer-30b:free یا deepseek-v4-flash:free)."
+            "حتماً مدل openrouter/free یا مدلی با پسوند :free در انتهای نامش انتخاب کنید."
         )
     if "429" in lower or "quota" in lower or "rate limit" in lower or "balance" in lower:
         return (
-            "⚠️ به سقف درخواست بخش رایگان برخورد کردید (خطای ۴۲۹ — در Routeway سقف رایگان ۲۰ درخواست در دقیقه و ۲۰۰ درخواست در روز است).\n"
-            "راه‌حل سریع: ۳۰ ثانیه صبر کنید یا از منوی بالای صفحه روی یکی دیگر از مدل‌های رایگان خود سوییچ کنید!"
+            "⚠️ به سقف درخواست بخش رایگان برخورد کردید (خطای ۴۲۹ — سقف رایگان Routeway برابر ۲۰۰ درخواست روزانه و OpenRouter برابر ۵۰ درخواست روزانه و ۲۰ درخواست در دقیقه است).\n"
+            "راه‌حل سریع: از منوی بالای صفحه با یک کلیک بین مدل‌های رایگان Routeway و OpenRouter خود سوییچ کنید!"
         )
     if "502" in lower or "503" in lower or "504" in lower or "upstream" in lower or "bad gateway" in lower:
         return (
@@ -727,8 +820,9 @@ def generate_python_code(
         import_line = "from browser_use import Agent, Browser, ChatGoogle"
         llm_init = f'llm = ChatGoogle(model="{model}")'
     elif provider == "openrouter":
-        import_line = "from browser_use import Agent, Browser, ChatOpenRouter"
-        llm_init = f'llm = ChatOpenRouter(model="{model}")'
+        free_flag = bool((profile or {}).get("free_only", True))
+        import_line = "from browser_use import Agent, Browser\nfrom backend.openrouter_llm import ChatOpenRouterSmart"
+        llm_init = f'llm = ChatOpenRouterSmart(model="{model}", free_only={free_flag})  # کلید OpenRouter از پروفایل فعال تزریق می‌شود'
     elif provider == "groq":
         import_line = "from browser_use import Agent, Browser, ChatGroq"
         llm_init = f'llm = ChatGroq(model="{model}")'

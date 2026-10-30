@@ -179,11 +179,16 @@ class AgentRunnerManager:
                     fallback_llm = None
 
             # Determine vision support cleanly
+            from backend.openrouter_llm import KNOWN_TEXT_ONLY_OPENROUTER_MODELS
             from backend.routeway_llm import KNOWN_TEXT_ONLY_ROUTEWAY_MODELS
 
             model_lower = (profile.get("model") or "").strip().lower()
             profile_vision = bool(profile.get("vision_enabled", True))
-            if model_lower in KNOWN_TEXT_ONLY_ROUTEWAY_MODELS or profile.get("provider") in ("deepseek", "cerebras"):
+            if (
+                model_lower in KNOWN_TEXT_ONLY_ROUTEWAY_MODELS
+                or model_lower in KNOWN_TEXT_ONLY_OPENROUTER_MODELS
+                or profile.get("provider") in ("deepseek", "cerebras")
+            ):
                 profile_vision = False
 
             want_vision = bool(settings.get("use_vision", True)) and profile_vision
@@ -215,7 +220,7 @@ class AgentRunnerManager:
                     "height": int(settings.get("window_height", 860)),
                 },
             }
-            if model_lower.endswith(":free") or profile.get("provider") == "routeway":
+            if model_lower.endswith(":free") or model_lower == "openrouter/free" or profile.get("provider") == "routeway":
                 b_kwargs["wait_between_actions"] = 1.4
             if sys.platform.startswith("linux"):
                 b_kwargs["chromium_sandbox"] = False

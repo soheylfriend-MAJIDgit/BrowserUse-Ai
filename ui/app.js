@@ -172,19 +172,41 @@ function updateProfilesState(profilesState) {
   $('profilesCountBadge').textContent = String(state.profiles.length);
   $('onboardingBanner').style.display = state.profiles.length === 0 ? 'flex' : 'none';
 
-  // Render Top Header Quick Switcher
+  // Render Top Header Quick Switcher (grouped cleanly by provider when multiple providers exist!)
   const headerSel = $('headerProfileSelect');
   if (state.profiles.length === 0) {
     headerSel.innerHTML = `<option value="">⚠️ هنوز کلیدی ثبت نشده — کلیک کنید</option>`;
   } else {
-    headerSel.innerHTML = state.profiles
-      .map((p) => {
-        const prov = state.providers.find((x) => x.id === p.provider);
-        const pShort = prov ? prov.short_name : p.provider;
-        const selected = p.id === state.activeProfileId ? 'selected' : '';
-        return `<option value="${escapeHtml(p.id)}" ${selected}>${escapeHtml(p.name)} (${escapeHtml(pShort)} • ${escapeHtml(p.model)})</option>`;
-      })
-      .join('');
+    const groupsMap = new Map();
+    state.profiles.forEach((p) => {
+      const prov = state.providers.find((x) => x.id === p.provider);
+      const groupTitle = prov ? prov.short_name : p.provider;
+      if (!groupsMap.has(groupTitle)) groupsMap.set(groupTitle, []);
+      groupsMap.get(groupTitle).push(p);
+    });
+
+    if (groupsMap.size > 1) {
+      headerSel.innerHTML = Array.from(groupsMap.entries())
+        .map(([gName, items]) => {
+          const opts = items
+            .map((p) => {
+              const selected = p.id === state.activeProfileId ? 'selected' : '';
+              return `<option value="${escapeHtml(p.id)}" ${selected}>${escapeHtml(p.name)} (${escapeHtml(p.model)})</option>`;
+            })
+            .join('');
+          return `<optgroup label="── ${escapeHtml(gName)} ──">${opts}</optgroup>`;
+        })
+        .join('');
+    } else {
+      headerSel.innerHTML = state.profiles
+        .map((p) => {
+          const prov = state.providers.find((x) => x.id === p.provider);
+          const pShort = prov ? prov.short_name : p.provider;
+          const selected = p.id === state.activeProfileId ? 'selected' : '';
+          return `<option value="${escapeHtml(p.id)}" ${selected}>${escapeHtml(p.name)} (${escapeHtml(pShort)} • ${escapeHtml(p.model)})</option>`;
+        })
+        .join('');
+    }
   }
 
   // Render Fallback Select
@@ -319,7 +341,7 @@ function updateProviderFormDetails(preserveValues = false) {
     $('profModelInput').value = prov.default_model || '';
     $('profBaseUrlInput').value = prov.default_base_url || '';
     $('profVisionChk').checked = Boolean(prov.vision_recommended);
-    $('profFreeOnlyChk').checked = prov.id === 'routeway';
+    $('profFreeOnlyChk').checked = prov.id === 'routeway' || prov.id === 'openrouter';
     $('profCompatChk').checked = false;
   }
 
@@ -347,8 +369,10 @@ function updateProviderFormDetails(preserveValues = false) {
   }
 
   $('btnScanRouteway').style.display = prov.id === 'routeway' ? 'inline-flex' : 'none';
-  $('freeOnlyWrap').style.display = prov.id === 'routeway' ? 'inline-flex' : 'none';
+  $('btnScanOpenRouter').style.display = prov.id === 'openrouter' ? 'inline-flex' : 'none';
+  $('freeOnlyWrap').style.display = prov.id === 'routeway' || prov.id === 'openrouter' ? 'inline-flex' : 'none';
   $('routewayBulkBox').style.display = prov.id === 'routeway' && !state.editingProfileId ? 'block' : 'none';
+  $('openrouterBulkBox').style.display = prov.id === 'openrouter' && !state.editingProfileId ? 'block' : 'none';
   $('btnScanOllama').style.display = prov.id === 'ollama' ? 'inline-flex' : 'none';
   $('compatModeWrap').style.display = prov.id === 'custom_openai' ? 'inline-flex' : 'none';
   $('testResultInline').style.display = 'none';
@@ -417,9 +441,10 @@ window.editProfile = function (profileId) {
   $('profTempInput').value = p.temperature ?? 0.2;
   $('tempValLabel').textContent = String(p.temperature ?? 0.2);
   $('profVisionChk').checked = Boolean(p.vision_enabled);
-  $('profFreeOnlyChk').checked = p.provider === 'routeway' ? Boolean(p.free_only ?? true) : false;
+  $('profFreeOnlyChk').checked = (p.provider === 'routeway' || p.provider === 'openrouter') ? Boolean(p.free_only ?? true) : false;
   $('profCompatChk').checked = Boolean(p.compat_schema_mode);
   $('routewayBulkBox').style.display = 'none';
+  $('openrouterBulkBox').style.display = 'none';
   $('btnSaveProfile').textContent = '💾 ذخیره تغییرات پروفایل';
   showToast(`در حال ویرایش «${p.name}»`);
 };
@@ -833,6 +858,63 @@ async function initApp() {
     }
   });
 
+  // Scan live OpenRouter FREE ($0.00) models
+  $('btnScanOpenRouter').addEventListener('click', async () => {
+    const key = $('profApiKeyInput').value.trim();
+    const baseUrl = $('profBaseUrlInput').value.trim() || 'https://openrouter.ai/api/v1';
+    const btn = $('btnScanOpenRouter');
+    btn.disabled = true;
+    btn.textContent = '⏳ در حال دریافت...';
+    try {
+      const qs = `api_key=${encodeURIComponent(key)}&base_url=${encodeURIComponent(baseUrl)}`;
+      const res = await apiFetch(`/api/openrouter/models?${qs}`);
+      showToast(res.message_fa, 5000);
+      if (res.ok && res.models && res.models.length > 0) {
+        const prov = state.providers.find((x) => x.id === 'openrouter');
+        if (prov) prov.models = res.models;
+        const sel = $('profSuggestedModelSelect');
+        sel.innerHTML = res.models
+          .map((m) => `<option value="${escapeHtml(m.id)}" data-vision="${m.vision}">${escapeHtml(m.label)}</option>`)
+          .join('');
+        $('profModelInput').value = res.models[0].id;
+        $('profVisionChk').checked = Boolean(res.models[0].vision);
+      }
+    } catch (err) {
+      showToast(`خطا: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔄 بروزرسانی لیست رایگان OpenRouter';
+    }
+  });
+
+  // 1-click Separate Bulk Setup for top 5 OpenRouter Free models
+  $('btnCreateOpenRouterPack').addEventListener('click', async () => {
+    const apiKey = $('profApiKeyInput').value.trim();
+    const baseUrl = $('profBaseUrlInput').value.trim() || 'https://openrouter.ai/api/v1';
+    const btn = $('btnCreateOpenRouterPack');
+    btn.disabled = true;
+    btn.textContent = '⏳ در حال ساخت ۵ پروفایل رایگان OpenRouter...';
+    try {
+      const res = await apiFetch('/api/openrouter/bulk-pack', {
+        method: 'POST',
+        body: JSON.stringify({ api_key: apiKey, base_url: baseUrl }),
+      });
+      if (!res.ok) {
+        showToast(`⚠️ ${res.error || 'خطا'}`);
+        $('profApiKeyInput').focus();
+        return;
+      }
+      updateProfilesState(res.profiles_state);
+      resetProfileForm();
+      showToast(res.message_fa, 6500);
+    } catch (err) {
+      showToast(`خطا: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚡ ساخت خودکار پک ۵ مدل رایگان OpenRouter با همین کلید';
+    }
+  });
+
   // Scan local Ollama models
   $('btnScanOllama').addEventListener('click', async () => {
     const host = $('profBaseUrlInput').value.trim() || 'http://localhost:11434';
@@ -874,7 +956,7 @@ async function initApp() {
           api_key: $('profApiKeyInput').value.trim() || null,
           base_url: $('profBaseUrlInput').value.trim(),
           temperature: parseFloat($('profTempInput').value || '0.2'),
-          free_only: state.selectedProviderId === 'routeway' ? $('profFreeOnlyChk').checked : false,
+          free_only: (state.selectedProviderId === 'routeway' || state.selectedProviderId === 'openrouter') ? $('profFreeOnlyChk').checked : false,
           compat_schema_mode: $('profCompatChk').checked,
         }),
       });
@@ -904,7 +986,7 @@ async function initApp() {
       base_url: $('profBaseUrlInput').value.trim(),
       temperature: parseFloat($('profTempInput').value || '0.2'),
       vision_enabled: $('profVisionChk').checked,
-      free_only: state.selectedProviderId === 'routeway' ? $('profFreeOnlyChk').checked : false,
+      free_only: (state.selectedProviderId === 'routeway' || state.selectedProviderId === 'openrouter') ? $('profFreeOnlyChk').checked : false,
       compat_schema_mode: $('profCompatChk').checked,
       set_active: true,
     };

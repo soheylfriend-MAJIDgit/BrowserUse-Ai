@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from backend.doctor import get_system_health
+from backend.openrouter_llm import fetch_openrouter_free_models
 from backend.providers import (
     PROVIDERS,
     fetch_ollama_models,
@@ -23,6 +24,7 @@ from backend.runner import agent_runner, browser_installer, script_runner
 from backend.storage import (
     OUTPUTS_DIR,
     TASK_TEMPLATES,
+    bulk_create_openrouter_free_pack,
     bulk_create_routeway_free_pack,
     clear_history,
     delete_profile,
@@ -94,6 +96,11 @@ class TestProfilePayload(BaseModel):
 class RoutewayBulkPayload(BaseModel):
     api_key: str = ""
     base_url: str = "https://api.routeway.ai/v1"
+
+
+class OpenRouterBulkPayload(BaseModel):
+    api_key: str = ""
+    base_url: str = "https://openrouter.ai/api/v1"
 
 
 class StartAgentPayload(BaseModel):
@@ -185,6 +192,7 @@ async def api_test_profile(payload: TestProfilePayload) -> dict[str, Any]:
             test_prof["model"] = payload.model
         if payload.base_url is not None and payload.base_url != "":
             test_prof["base_url"] = payload.base_url
+        test_prof["free_only"] = payload.free_only
     else:
         test_prof = {
             "provider": payload.provider or "routeway",
@@ -216,6 +224,24 @@ async def api_routeway_bulk_pack(payload: RoutewayBulkPayload) -> dict[str, Any]
             "ok": True,
             "profiles_state": state,
             "message_fa": "✅ ۵ مدل برتر رایگان Routeway (Glimmer 30B، دو مدل Gemma 4 26B، DeepSeek V4 Flash و MiniMax M2.7) به همراه مدل پشتیبان خودکار برایتان ساخته شد!",
+        }
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+@app.get("/api/openrouter/models")
+async def api_openrouter_models(api_key: str = "", base_url: str = "https://openrouter.ai/api/v1") -> dict[str, Any]:
+    return await fetch_openrouter_free_models(api_key=api_key, base_url=base_url)
+
+
+@app.post("/api/openrouter/bulk-pack")
+async def api_openrouter_bulk_pack(payload: OpenRouterBulkPayload) -> dict[str, Any]:
+    try:
+        state = bulk_create_openrouter_free_pack(api_key=payload.api_key, base_url=payload.base_url)
+        return {
+            "ok": True,
+            "profiles_state": state,
+            "message_fa": "✅ ۵ مدل برتر رایگان OpenRouter (روتر هوشمند، NVIDIA Nemotron 3.5 Super VL، Google Gemma 4 31B، Inkling MoE و Nemotron 550B) به صورت جداگانه در کنار پروفایل‌های شما ذخیره شد!",
         }
     except ValueError as exc:
         return {"ok": False, "error": str(exc)}
